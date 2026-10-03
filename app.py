@@ -67,10 +67,11 @@ st_folium(
     width=1200,
     height=650
 )
-
 # -----------------------------
 # 7. Show ranking table
 # -----------------------------
+st.write("CCI columns:")
+st.write(cci.columns.tolist())
 st.subheader("CCI Ranking")
 
 st.dataframe(cci)
