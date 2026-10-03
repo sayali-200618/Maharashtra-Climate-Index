@@ -45,14 +45,55 @@ m = folium.Map(
 )
 
 # -----------------------------
-# 5. Add CCI values to map
+# 5. Prepare CCI data
 # -----------------------------
+
+# Keep only the columns needed for the map
+cci_map = cci[
+    ["District", "PCA_CCI", "Rank"]
+].copy()
+
+# Make district names consistent
+cci_map["District"] = cci_map["District"].str.strip()
+gdf["district"] = gdf["district"].str.strip()
+
+# Merge CCI values with map districts
+gdf = gdf.merge(
+    cci_map,
+    left_on="district",
+    right_on="District",
+    how="left"
+)
+
+# -----------------------------
+# 6. Colored CCI map
+# -----------------------------
+
+folium.Choropleth(
+    geo_data=gdf,
+    data=gdf,
+    columns=["district", "PCA_CCI"],
+    key_on="feature.properties.district",
+    fill_color="YlOrRd",
+    fill_opacity=0.75,
+    line_opacity=0.5,
+    legend_name="PCA Climate Change Index"
+).add_to(m)
+
+# -----------------------------
+# 7. District information
+# -----------------------------
+
 folium.GeoJson(
     gdf,
-    name="Maharashtra Districts",
+    name="District Information",
     tooltip=folium.GeoJsonTooltip(
-        fields=["district"],
-        aliases=["District:"],
+        fields=["district", "PCA_CCI", "Rank"],
+        aliases=[
+            "District:",
+            "PCA CCI:",
+            "Rank:"
+        ],
         localize=True
     )
 ).add_to(m)
