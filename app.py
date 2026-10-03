@@ -93,10 +93,10 @@ def map_style(feature):
         color = "red"
 
     elif category == "Moderate":
-        color = "maroon"
+        color = "orange"
 
     else:
-        color = "pink"
+        color = "navyblue"
 
     return {
         "fillColor": color,
