@@ -93,7 +93,7 @@ def map_style(feature):
         color = "red"
 
     elif category == "Moderate":
-        color = "orange"
+        color = "lightorange"
 
     else:
         color = "lightblue"
