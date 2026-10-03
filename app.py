@@ -15,7 +15,7 @@ st.write("District-wise Climate Change Index for Maharashtra (2000–2025)")
 
 # Read CCI data
 cci = pd.read_excel(
-    "Maharashtra_Climate_Change_Index_COMPLETE.xlsx",
+    "Maharashtra_36_Districts_PCA_CCI_Final_Ranking.xlsx",
     sheet_name="CCI_Ranking"
 )
 
