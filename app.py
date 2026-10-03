@@ -218,6 +218,26 @@ m.get_root().html.add_child(
     folium.Element(legend_html)
 )
 # ==========================================
+# CATEGORY SUMMARY
+# ==========================================
+
+low_count = (gdf["CCI_Category"] == "Low").sum()
+moderate_count = (gdf["CCI_Category"] == "Moderate").sum()
+high_count = (gdf["CCI_Category"] == "High").sum()
+
+st.subheader("CCI Category Summary")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("Low", low_count)
+
+with col2:
+    st.metric("Moderate", moderate_count)
+
+with col3:
+    st.metric("High", high_count)
+# ==========================================
 # SHOW CLASSIFICATION
 # ==========================================
 
