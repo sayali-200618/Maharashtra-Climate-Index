@@ -133,8 +133,90 @@ folium.GeoJson(
         localize=True
     )
 ).add_to(m)
+# ==========================================
+# ADD DISTRICT NAMES
+# ==========================================
 
+for _, row in gdf.iterrows():
 
+    if row.geometry is not None and not row.geometry.is_empty:
+
+        point = row.geometry.representative_point()
+
+        folium.map.Marker(
+            [point.y, point.x],
+            icon=folium.DivIcon(
+                html=f"""
+                <div style="
+                    font-size: 9px;
+                    font-weight: bold;
+                    color: black;
+                    text-align: center;
+                    white-space: nowrap;
+                ">
+                    {row["district"]}
+                </div>
+                """
+            )
+        ).add_to(m)
+# ==========================================
+# MAP LEGEND
+# ==========================================
+
+legend_html = f"""
+<div style="
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    background-color: white;
+    border: 2px solid grey;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 13px;
+">
+
+<b>CCI Category</b><br><br>
+
+<div>
+<span style="
+    background-color: yellow;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    margin-right: 6px;
+"></span>
+Low: ≤ {q33:.2f}
+</div>
+
+<div>
+<span style="
+    background-color: orange;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    margin-right: 6px;
+"></span>
+Moderate: > {q33:.2f} – ≤ {q67:.2f}
+</div>
+
+<div>
+<span style="
+    background-color: red;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    margin-right: 6px;
+"></span>
+High: > {q67:.2f}
+</div>
+
+</div>
+"""
+
+m.get_root().html.add_child(
+    folium.Element(legend_html)
+)
 # ==========================================
 # SHOW CLASSIFICATION
 # ==========================================
