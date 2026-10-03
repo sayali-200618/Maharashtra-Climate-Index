@@ -48,27 +48,20 @@ gdf = gdf.merge(
     right_on="District",
     how="left"
 )
-
-
 # ==========================================
-# EQUAL INTERVAL CLASSIFICATION
+# QUANTILE CLASSIFICATION
 # ==========================================
 
-min_cci = gdf["PCA_CCI"].min()
-max_cci = gdf["PCA_CCI"].max()
-
-interval = (max_cci - min_cci) / 3
-
-low_max = min_cci + interval
-moderate_max = min_cci + (2 * interval)
+q33 = gdf["PCA_CCI"].quantile(1/3)
+q67 = gdf["PCA_CCI"].quantile(2/3)
 
 
 def classify_cci(value):
 
-    if value <= low_max:
+    if value <= q33:
         return "Low"
 
-    elif value <= moderate_max:
+    elif value <= q67:
         return "Moderate"
 
     else:
@@ -76,7 +69,6 @@ def classify_cci(value):
 
 
 gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
-
 
 # ==========================================
 # CREATE MAP
@@ -149,13 +141,12 @@ folium.GeoJson(
 
 st.subheader("PCA Climate Change Index Classification")
 
-st.write(f"Minimum PCA_CCI: {min_cci:.2f}")
-st.write(f"Maximum PCA_CCI: {max_cci:.2f}")
+st.write(f"33.33rd Percentile: {q33:.2f}")
+st.write(f"66.67th Percentile: {q67:.2f}")
 
-st.write(f"🟡 Low: {min_cci:.2f} – {low_max:.2f}")
-st.write(f"🟠 Moderate: {low_max:.2f} – {moderate_max:.2f}")
-st.write(f"🔴 High: {moderate_max:.2f} – {max_cci:.2f}")
-
+st.write(f"🟡 Low: PCA_CCI ≤ {q33:.2f}")
+st.write(f"🟠 Moderate: {q33:.2f} < PCA_CCI ≤ {q67:.2f}")
+st.write(f"🔴 High: PCA_CCI > {q67:.2f}")
 
 # ==========================================
 # DISPLAY MAP
