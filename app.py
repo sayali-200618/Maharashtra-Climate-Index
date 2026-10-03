@@ -96,7 +96,7 @@ def map_style(feature):
         color = "orange"
 
     else:
-        color = "navyblue"
+        color = "blue"
 
     return {
         "fillColor": color,
