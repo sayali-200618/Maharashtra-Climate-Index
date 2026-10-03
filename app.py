@@ -98,13 +98,13 @@ def map_style(feature):
     category = feature["properties"]["CCI_Category"]
 
     if category == "Low":
-        color = "lightblue"
+        color = "lightred"
 
     elif category == "Moderate":
-        color = "blue"
+        color = "red"
 
     else:
-        color = "darkblue"
+        color = "darkred"
 
     return {
         "fillColor": color,
