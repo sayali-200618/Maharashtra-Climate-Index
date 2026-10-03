@@ -29,35 +29,19 @@ gdf = gpd.read_file(
     "Maharashtra_Districts_36.geojson"
 )
 
-# -----------------------------
-# 3. Check district names
-# -----------------------------
-st.write("CCI districts:", len(cci))
-st.write("Map districts:", len(gdf))
+# ==========================================
+# MERGE CCI DATA WITH MAP
+# ==========================================
 
-# -----------------------------
-# 4. Create map
-# -----------------------------
-m = folium.Map(
-    location=[19.5, 75.5],
-    zoom_start=6,
-    tiles="CartoDB positron"
-)
-
-# -----------------------------
-# 5. Prepare CCI data
-# -----------------------------
-
-# Keep only the columns needed for the map
 cci_map = cci[
-    ["District", "PCA_CCI", "Rank"]
+    ["District", "PCA_CCI", "Rank",
+     "Rainfall_Score", "Tmax_Score",
+     "Tmin_Score", "DTR_Score"]
 ].copy()
 
-# Make district names consistent
 cci_map["District"] = cci_map["District"].str.strip()
 gdf["district"] = gdf["district"].str.strip()
 
-# Merge CCI values with map districts
 gdf = gdf.merge(
     cci_map,
     left_on="district",
@@ -65,42 +49,118 @@ gdf = gdf.merge(
     how="left"
 )
 
-# -----------------------------
-# 6. Colored CCI map
-# -----------------------------
 
-folium.Choropleth(
-    geo_data=gdf,
-    data=gdf,
-    columns=["district", "PCA_CCI"],
-    key_on="feature.properties.district",
-    fill_color="YlOrRd",
-    fill_opacity=0.75,
-    line_opacity=0.5,
-    legend_name="PCA Climate Change Index"
-).add_to(m)
+# ==========================================
+# EQUAL INTERVAL CLASSIFICATION
+# ==========================================
 
-# -----------------------------
-# 7. District information
-# -----------------------------
+min_cci = gdf["PCA_CCI"].min()
+max_cci = gdf["PCA_CCI"].max()
+
+interval = (max_cci - min_cci) / 3
+
+low_max = min_cci + interval
+moderate_max = min_cci + (2 * interval)
+
+
+def classify_cci(value):
+
+    if value <= low_max:
+        return "Low"
+
+    elif value <= moderate_max:
+        return "Moderate"
+
+    else:
+        return "High"
+
+
+gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
+
+
+# ==========================================
+# CREATE MAP
+# ==========================================
+
+m = folium.Map(
+    location=[19.5, 75.5],
+    zoom_start=6,
+    tiles="CartoDB positron"
+)
+
+
+# ==========================================
+# COLOURS
+# ==========================================
+
+def map_style(feature):
+
+    category = feature["properties"]["CCI_Category"]
+
+    if category == "Low":
+        color = "yellow"
+
+    elif category == "Moderate":
+        color = "orange"
+
+    else:
+        color = "red"
+
+    return {
+        "fillColor": color,
+        "color": "black",
+        "weight": 1,
+        "fillOpacity": 0.65
+    }
+
+
+# ==========================================
+# ADD DISTRICTS TO MAP
+# ==========================================
 
 folium.GeoJson(
     gdf,
-    name="District Information",
+    name="CCI Classification",
+    style_function=map_style,
+
     tooltip=folium.GeoJsonTooltip(
-        fields=["district", "PCA_CCI", "Rank"],
+        fields=[
+            "district",
+            "PCA_CCI",
+            "CCI_Category",
+            "Rank"
+        ],
+
         aliases=[
             "District:",
             "PCA CCI:",
+            "Category:",
             "Rank:"
         ],
+
         localize=True
     )
 ).add_to(m)
 
-# -----------------------------
-# 6. Display map
-# -----------------------------
+
+# ==========================================
+# SHOW CLASSIFICATION
+# ==========================================
+
+st.subheader("PCA Climate Change Index Classification")
+
+st.write(f"Minimum PCA_CCI: {min_cci:.2f}")
+st.write(f"Maximum PCA_CCI: {max_cci:.2f}")
+
+st.write(f"🟡 Low: {min_cci:.2f} – {low_max:.2f}")
+st.write(f"🟠 Moderate: {low_max:.2f} – {moderate_max:.2f}")
+st.write(f"🔴 High: {moderate_max:.2f} – {max_cci:.2f}")
+
+
+# ==========================================
+# DISPLAY MAP
+# ==========================================
+
 st.subheader("Maharashtra District Map")
 
 st_folium(
@@ -108,11 +168,12 @@ st_folium(
     width=1200,
     height=650
 )
-# -----------------------------
-# 7. Show ranking table
-# -----------------------------
-st.write("CCI columns:")
-st.write(cci.columns.tolist())
+
+
+# ==========================================
+# RANKING TABLE
+# ==========================================
+
 st.subheader("CCI Ranking")
 
 st.dataframe(cci)
