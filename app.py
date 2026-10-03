@@ -270,3 +270,15 @@ st_folium(
 st.subheader("CCI Ranking")
 
 st.dataframe(cci)
+# ==========================================
+# DOWNLOAD CCI RANKING
+# ==========================================
+
+csv_data = cci.to_csv(index=False)
+
+st.download_button(
+    label="Download CCI Ranking (CSV)",
+    data=csv_data,
+    file_name="Maharashtra_CCI_Ranking.csv",
+    mime="text/csv"
+)
