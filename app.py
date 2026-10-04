@@ -4,9 +4,9 @@ import json
 import plotly.graph_objects as go
 
 
-# --------------------------------------------------
+# ==================================================
 # PAGE SETTINGS
-# --------------------------------------------------
+# ==================================================
 
 st.set_page_config(
     page_title="Maharashtra Climate Change Index",
@@ -14,9 +14,9 @@ st.set_page_config(
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # TITLE
-# --------------------------------------------------
+# ==================================================
 
 st.title("Maharashtra District CCI Map")
 
@@ -25,14 +25,12 @@ st.write(
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # READ CCI DATA
-# --------------------------------------------------
-
-file = "Maharashtra_36_Districts_PCA_CCI_Final_Ranking.xlsx"
+# ==================================================
 
 cci = pd.read_excel(
-    file,
+    "Maharashtra_36_Districts_PCA_CCI_Final_Ranking.xlsx",
     sheet_name="Final_CCI_Ranking"
 )
 
@@ -43,9 +41,9 @@ cci["District"] = (
 )
 
 
-# --------------------------------------------------
-# DISTRICT NAME MATCHING
-# --------------------------------------------------
+# ==================================================
+# MATCH DISTRICT NAMES WITH GEOJSON
+# ==================================================
 
 name_changes = {
     "Chhatrapati Sambhaji Nagar": "Aurangabad",
@@ -55,14 +53,13 @@ name_changes = {
 }
 
 cci["GeoDistrict"] = (
-    cci["District"]
-    .replace(name_changes)
+    cci["District"].replace(name_changes)
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # LOW / MODERATE / HIGH CLASSIFICATION
-# --------------------------------------------------
+# ==================================================
 
 q33 = cci["PCA_CCI"].quantile(0.33)
 q67 = cci["PCA_CCI"].quantile(0.67)
@@ -83,28 +80,29 @@ cci["CCI_Category"] = pd.cut(
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # READ GEOJSON
-# --------------------------------------------------
+# ==================================================
 
 with open(
     "Maharashtra_Districts_36.geojson",
     "r",
     encoding="utf-8"
 ) as f:
+
     geojson = json.load(f)
 
 
-# --------------------------------------------------
+# ==================================================
 # CREATE MAP
-# --------------------------------------------------
+# ==================================================
 
 fig = go.Figure()
 
 
-# --------------------------------------------------
-# COLOURS
-# --------------------------------------------------
+# ==================================================
+# CATEGORY COLOURS
+# ==================================================
 
 category_colors = {
     "Low": "yellow",
@@ -113,9 +111,9 @@ category_colors = {
 }
 
 
-# --------------------------------------------------
+# ==================================================
 # ADD DISTRICT POLYGONS
-# --------------------------------------------------
+# ==================================================
 
 for category in ["Low", "Moderate", "High"]:
 
@@ -123,7 +121,7 @@ for category in ["Low", "Moderate", "High"]:
         cci["CCI_Category"] == category
     ].copy()
 
-    if data.empty:
+    if len(data) == 0:
         continue
 
     customdata = data[
@@ -181,14 +179,16 @@ for category in ["Low", "Moderate", "High"]:
     )
 
 
-# --------------------------------------------------
+# ==================================================
 # FIND DISTRICT LABEL POSITIONS
-# --------------------------------------------------
+# ==================================================
 
 label_data = []
 
 
-def extract_points(obj, points):
+def get_points(obj):
+
+    points = []
 
     if isinstance(obj, list):
 
@@ -197,6 +197,7 @@ def extract_points(obj, points):
             and isinstance(obj[0], (int, float))
             and isinstance(obj[1], (int, float))
         ):
+
             points.append(
                 (obj[0], obj[1])
             )
@@ -204,30 +205,40 @@ def extract_points(obj, points):
         else:
 
             for item in obj:
-                extract_points(item, points)
+                points.extend(
+                    get_points(item)
+                )
+
+    return points
 
 
 for feature in geojson["features"]:
 
-    district = feature["properties"]["district"]
+    district = feature["properties"].get(
+        "district"
+    )
 
-    points = []
+    geometry = feature.get("geometry")
 
-    extract_points(
-        feature["geometry"]["coordinates"],
-        points
+    if geometry is None:
+        continue
+
+    points = get_points(
+        geometry.get("coordinates")
     )
 
     if not points:
         continue
 
-    lon = sum(
-        p[0] for p in points
-    ) / len(points)
+    lon = (
+        sum(p[0] for p in points)
+        / len(points)
+    )
 
-    lat = sum(
-        p[1] for p in points
-    ) / len(points)
+    lat = (
+        sum(p[1] for p in points)
+        / len(points)
+    )
 
     label_data.append(
         {
@@ -241,9 +252,9 @@ for feature in geojson["features"]:
 labels = pd.DataFrame(label_data)
 
 
-# --------------------------------------------------
-# ADD CCI INFORMATION TO LABELS
-# --------------------------------------------------
+# ==================================================
+# MATCH LABELS WITH CCI DATA
+# ==================================================
 
 labels = labels.merge(
     cci[
@@ -253,24 +264,32 @@ labels = labels.merge(
             "Rank"
         ]
     ],
+
     on="GeoDistrict",
+
     how="left"
 )
 
 
-# --------------------------------------------------
-# DISTRICT NAME + RANK
-# --------------------------------------------------
+# Keep only districts having CCI data
+labels = labels.dropna(
+    subset=["Rank"]
+).copy()
+
+
+# ==================================================
+# ADD DISTRICT NAME + RANK
+# ==================================================
 
 fig.add_trace(
     go.Scattergeo(
+
         lon=labels["lon"],
+
         lat=labels["lat"],
 
         text=[
-            f"{district}<br>{int(rank)}"
-            if pd.notna(rank)
-            else district
+            f"{district}<br>Rank: {int(rank)}"
             for district, rank
             in zip(
                 labels["District"],
@@ -292,41 +311,52 @@ fig.add_trace(
 )
 
 
-# --------------------------------------------------
-# MAHARASHTRA ZOOM-IN
-# --------------------------------------------------
+# ==================================================
+# MAHARASHTRA ONLY — ZOOMED IN
+# ==================================================
 
 fig.update_geos(
+
     visible=False,
 
     projection_type="mercator",
 
     center=dict(
         lat=19.2,
-        lon=76.3
+        lon=76.5
     ),
 
-    projection_scale=10,
+    projection_scale=6.5,
 
     lonaxis=dict(
-        range=[72.4, 81.1]
+        range=[
+            72.4,
+            81.2
+        ]
     ),
 
     lataxis=dict(
-        range=[15.3, 22.3]
+        range=[
+            15.3,
+            22.3
+        ]
     ),
 
     showland=False,
 
     showocean=False,
 
-    showcountries=False
+    showcountries=False,
+
+    showcoastlines=False,
+
+    showframe=False
 )
 
 
-# --------------------------------------------------
-# MAP LAYOUT
-# --------------------------------------------------
+# ==================================================
+# MAP LAYOUT + LEGEND
+# ==================================================
 
 fig.update_layout(
 
@@ -345,30 +375,75 @@ fig.update_layout(
 
     legend=dict(
         title="CCI Category",
+
         orientation="v",
-        x=0.90,
-        y=0.90
+
+        x=0.88,
+
+        y=0.90,
+
+        bgcolor="white",
+
+        bordercolor="black",
+
+        borderwidth=1
     )
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # DISPLAY MAP
-# --------------------------------------------------
+# ==================================================
 
 st.plotly_chart(
     fig,
+
     use_container_width=True,
+
     config={
         "scrollZoom": True,
-        "displayModeBar": True
+        "displayModeBar": True,
+        "displaylogo": False
     }
 )
 
 
-# --------------------------------------------------
+# ==================================================
+# DOWNLOAD MAP AS PNG
+# ==================================================
+
+st.subheader("Download Map")
+
+try:
+
+    image_bytes = fig.to_image(
+        format="png",
+        width=1600,
+        height=1000,
+        scale=2
+    )
+
+    st.download_button(
+        label="Download Map as PNG",
+
+        data=image_bytes,
+
+        file_name="Maharashtra_CCI_Map.png",
+
+        mime="image/png"
+    )
+
+except Exception:
+
+    st.warning(
+        "PNG download requires Kaleido. "
+        "Add 'kaleido' to requirements.txt and redeploy the app."
+    )
+
+
+# ==================================================
 # CATEGORY SUMMARY
-# --------------------------------------------------
+# ==================================================
 
 st.subheader("CCI Category Summary")
 
@@ -376,7 +451,11 @@ category_summary = (
     cci["CCI_Category"]
     .value_counts()
     .reindex(
-        ["Low", "Moderate", "High"],
+        [
+            "Low",
+            "Moderate",
+            "High"
+        ],
         fill_value=0
     )
     .reset_index()
@@ -389,14 +468,16 @@ category_summary.columns = [
 
 st.dataframe(
     category_summary,
+
     use_container_width=True,
+
     hide_index=True
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # CCI RANKING
-# --------------------------------------------------
+# ==================================================
 
 st.subheader("CCI Ranking")
 
@@ -408,22 +489,28 @@ ranking_table = (
 
 st.dataframe(
     ranking_table,
+
     use_container_width=True,
+
     hide_index=True
 )
 
 
-# --------------------------------------------------
-# DOWNLOAD CSV
-# --------------------------------------------------
+# ==================================================
+# DOWNLOAD CCI RANKING
+# ==================================================
 
 csv_data = cci.to_csv(
     index=False
 )
 
 st.download_button(
+
     label="Download CCI Ranking (CSV)",
+
     data=csv_data,
+
     file_name="Maharashtra_CCI_Ranking.csv",
+
     mime="text/csv"
 )
