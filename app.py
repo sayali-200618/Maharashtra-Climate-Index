@@ -73,9 +73,9 @@ labels = pd.DataFrame(label_data)
 # --------------------------------------------------
 
 labels = labels.merge(
-    df[["District Name (district_name)", "Rank"]],
+    df[["District", "Rank"]]
     left_on="District",
-    right_on="District Name (district_name)",
+    right_on="District Name",
     how="left"
 )
 
@@ -83,15 +83,15 @@ labels = labels.merge(
 # 5. CHOROPLETH MAP
 # --------------------------------------------------
 
-st.subheader("District Accessibility Map")
+st.subheader("District Climate Map")
 
 fig = px.choropleth(
     df,
     geojson=geojson,
-    locations="District Name (district_name)",
+    locations="District Name,
     featureidkey="properties.district",
     color="Overall Accessibility Score",
-    hover_name="District Name (district_name)",
+    hover_name="District Name",
     hover_data={
         "Overall Accessibility Score": ":.4f",
         "Rank": True
@@ -154,13 +154,3 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# --------------------------------------------------
-# 8. RESULT TABLE
-# --------------------------------------------------
-
-st.subheader("District Accessibility Result")
-
-st.dataframe(
-    df,
-    use_container_width=True
-)
