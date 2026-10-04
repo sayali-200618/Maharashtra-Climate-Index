@@ -4,17 +4,26 @@ import json
 import plotly.express as px
 import plotly.graph_objects as go
 
+
+# ==========================================
+# PAGE SETTINGS
+# ==========================================
+
 st.set_page_config(
     page_title="Maharashtra Climate Change Index",
     layout="wide"
 )
 
 st.title("Maharashtra Climate Change Index")
-st.write("District-wise Climate Change Index for Maharashtra (2000–2025)")
 
-# -----------------------------
-# 1. Read CCI data
-# -----------------------------
+st.write(
+    "District-wise Climate Change Index for Maharashtra (2000–2025)"
+)
+
+
+# ==========================================
+# 1. READ CCI DATA
+# ==========================================
 
 file = "Maharashtra_36_Districts_PCA_CCI_Final_Ranking.xlsx"
 
@@ -23,56 +32,12 @@ cci = pd.read_excel(
     sheet_name="Final_CCI_Ranking"
 )
 
-# ==========================================
-# MERGE CCI DATA WITH MAP
-# ==========================================
+# Remove extra spaces from district names
+cci["District"] = cci["District"].astype(str).str.strip()
 
-cci_map = cci[
-    [
-        "District",
-        "PCA_CCI",
-        "Rank",
-        "Rainfall_Score",
-        "Tmax_Score",
-        "Tmin_Score",
-        "DTR_Score"
-    ]
-].copy()
-
-cci_map["District"] = cci_map["District"].str.strip()
-gdf["district"] = gdf["district"].str.strip()
-
-gdf = gdf.merge(
-    cci_map,
-    left_on="district",
-    right_on="District",
-    how="left"
-)
 
 # ==========================================
-# QUANTILE CLASSIFICATION
-# ==========================================
-
-q33 = gdf["PCA_CCI"].quantile(1 / 3)
-q67 = gdf["PCA_CCI"].quantile(2 / 3)
-
-
-def classify_cci(value):
-
-    if value <= q33:
-        return "Low"
-
-    elif value <= q67:
-        return "Moderate"
-
-    else:
-        return "High"
-
-
-gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
-
-# ==========================================
-# READ GEOJSON DIRECTLY
+# 2. READ MAHARASHTRA GEOJSON
 # ==========================================
 
 with open(
@@ -85,96 +50,11 @@ with open(
 
 
 # ==========================================
-# CREATE DISTRICT LABEL POSITIONS
+# 3. CCI MAP
 # ==========================================
 
-def get_all_points(coords):
+st.subheader("Maharashtra District CCI Map")
 
-    points = []
-
-    def extract(obj):
-
-        if isinstance(obj, (list, tuple)):
-
-            if (
-                len(obj) >= 2
-                and isinstance(obj[0], (int, float))
-            ):
-
-                points.append(
-                    (obj[0], obj[1])
-                )
-
-            else:
-
-                for item in obj:
-                    extract(item)
-
-    extract(coords)
-
-    return points
-
-
-label_data = []
-
-for feature in geojson["features"]:
-
-    district_name = feature["properties"].get(
-        "district"
-    )
-
-    geometry = feature["geometry"]
-
-    if geometry is None:
-        continue
-
-    points = get_all_points(
-        geometry["coordinates"]
-    )
-
-    if points:
-
-        avg_lon = sum(
-            p[0] for p in points
-        ) / len(points)
-
-        avg_lat = sum(
-            p[1] for p in points
-        ) / len(points)
-
-        label_data.append(
-            {
-                "District": district_name,
-                "lon": avg_lon,
-                "lat": avg_lat
-            }
-        )
-
-
-labels = pd.DataFrame(label_data)
-
-
-# ==========================================
-# MATCH RANK WITH DISTRICT
-# ==========================================
-
-labels = labels.merge(
-    cci[
-        ["District", "Rank"]
-    ],
-    left_on="District",
-    right_on="District",
-    how="left"
-)
-
-
-# ==========================================
-# CCI MAP
-# ==========================================
-
-st.subheader(
-    "Maharashtra District CCI Map"
-)
 
 fig = px.choropleth(
 
@@ -204,7 +84,90 @@ fig = px.choropleth(
 
 
 # ==========================================
-# DISTRICT NAME + RANK
+# 4. DISTRICT LABELS + RANK
+# ==========================================
+
+label_data = []
+
+
+def get_points(coordinates):
+
+    points = []
+
+    def extract(obj):
+
+        if isinstance(obj, (list, tuple)):
+
+            if (
+                len(obj) >= 2
+                and isinstance(obj[0], (int, float))
+                and isinstance(obj[1], (int, float))
+            ):
+
+                points.append(
+                    (obj[0], obj[1])
+                )
+
+            else:
+
+                for item in obj:
+                    extract(item)
+
+    extract(coordinates)
+
+    return points
+
+
+for feature in geojson["features"]:
+
+    district_name = feature["properties"].get(
+        "district"
+    )
+
+    geometry = feature.get("geometry")
+
+    if geometry is None:
+        continue
+
+    points = get_points(
+        geometry["coordinates"]
+    )
+
+    if len(points) == 0:
+        continue
+
+    longitude = sum(
+        point[0] for point in points
+    ) / len(points)
+
+    latitude = sum(
+        point[1] for point in points
+    ) / len(points)
+
+    label_data.append(
+        {
+            "District": district_name,
+            "lon": longitude,
+            "lat": latitude
+        }
+    )
+
+
+labels = pd.DataFrame(label_data)
+
+
+# Match rank with district
+labels = labels.merge(
+    cci[
+        ["District", "Rank"]
+    ],
+    on="District",
+    how="left"
+)
+
+
+# ==========================================
+# 5. ADD DISTRICT NAMES AND RANKS
 # ==========================================
 
 fig.add_trace(
@@ -216,8 +179,9 @@ fig.add_trace(
         lat=labels["lat"],
 
         text=[
-            f"{name}<br>Rank: {rank}"
-            for name, rank in zip(
+            f"{district}<br>Rank: {rank}"
+            for district, rank
+            in zip(
                 labels["District"],
                 labels["Rank"]
             )
@@ -226,18 +190,11 @@ fig.add_trace(
         mode="text",
 
         textfont=dict(
-            size=9
+            size=8,
+            color="black"
         ),
 
         hoverinfo="text",
-
-        hovertext=[
-            f"{name}<br>Rank: {rank}"
-            for name, rank in zip(
-                labels["District"],
-                labels["Rank"]
-            )
-        ],
 
         showlegend=False
     )
@@ -245,14 +202,16 @@ fig.add_trace(
 
 
 # ==========================================
-# MAP SETTINGS
+# 6. MAP SETTINGS
 # ==========================================
 
 fig.update_geos(
 
     fitbounds="locations",
 
-    visible=False
+    visible=False,
+
+    projection_type="mercator"
 )
 
 
@@ -261,53 +220,53 @@ fig.update_layout(
     height=700,
 
     margin=dict(
+        l=0,
         r=0,
         t=20,
-        l=0,
         b=0
-    )
+    ),
+
+    paper_bgcolor="white"
 )
 
 
 # ==========================================
-# DISPLAY MAP
+# 7. DISPLAY MAP
 # ==========================================
 
 st.plotly_chart(
-
     fig,
-
     use_container_width=True
 )
 
 
 # ==========================================
-# RANKING TABLE
+# 8. CCI RANKING TABLE
 # ==========================================
 
 st.subheader("CCI Ranking")
+
 
 ranking_table = cci.sort_values(
     "Rank"
 ).copy()
 
+
 st.dataframe(
-
     ranking_table,
-
     use_container_width=True,
-
     hide_index=True
 )
 
 
 # ==========================================
-# DOWNLOAD CCI RANKING
+# 9. DOWNLOAD CCI RANKING
 # ==========================================
 
 csv_data = cci.to_csv(
     index=False
 )
+
 
 st.download_button(
 
