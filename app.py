@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import json
-import plotly.express as px
 import plotly.graph_objects as go
 
 
@@ -45,7 +44,24 @@ cci["District"] = (
 
 
 # --------------------------------------------------
-# CREATE LOW / MODERATE / HIGH CATEGORIES
+# DISTRICT NAME MATCHING
+# --------------------------------------------------
+
+name_changes = {
+    "Chhatrapati Sambhaji Nagar": "Aurangabad",
+    "Chhatrapati Sambhajinagar": "Aurangabad",
+    "Sambhajinagar": "Aurangabad",
+    "Ahilyanagar": "Ahmednagar"
+}
+
+cci["GeoDistrict"] = (
+    cci["District"]
+    .replace(name_changes)
+)
+
+
+# --------------------------------------------------
+# LOW / MODERATE / HIGH CLASSIFICATION
 # --------------------------------------------------
 
 q33 = cci["PCA_CCI"].quantile(0.33)
@@ -76,125 +92,148 @@ with open(
     "r",
     encoding="utf-8"
 ) as f:
-
     geojson = json.load(f)
 
 
 # --------------------------------------------------
-# MAP TITLE
+# CREATE MAP
 # --------------------------------------------------
 
-st.subheader("Maharashtra District CCI Map")
-
-
-# --------------------------------------------------
-# CREATE CHOROPLETH MAP
-# --------------------------------------------------
-
-fig = px.choropleth(
-
-    cci,
-
-    geojson=geojson,
-
-    locations="District",
-
-    featureidkey="properties.district",
-
-    color="CCI_Category",
-
-    color_discrete_map={
-        "Low": "yellow",
-        "Moderate": "orange",
-        "High": "red"
-    },
-
-    hover_name="District",
-
-    hover_data={
-        "PCA_CCI": ":.2f",
-        "Rank": True,
-        "CCI_Category": True,
-        "Rainfall_Score": ":.2f",
-        "Tmax_Score": ":.2f",
-        "Tmin_Score": ":.2f",
-        "DTR_Score": ":.2f"
-    }
-
-)
+fig = go.Figure()
 
 
 # --------------------------------------------------
-# FIND LABEL POSITIONS
+# COLOURS
+# --------------------------------------------------
+
+category_colors = {
+    "Low": "yellow",
+    "Moderate": "orange",
+    "High": "red"
+}
+
+
+# --------------------------------------------------
+# ADD DISTRICT POLYGONS
+# --------------------------------------------------
+
+for category in ["Low", "Moderate", "High"]:
+
+    data = cci[
+        cci["CCI_Category"] == category
+    ].copy()
+
+    if data.empty:
+        continue
+
+    customdata = data[
+        [
+            "District",
+            "PCA_CCI",
+            "Rank",
+            "Rainfall_Score",
+            "Tmax_Score",
+            "Tmin_Score",
+            "DTR_Score"
+        ]
+    ].values
+
+    fig.add_trace(
+        go.Choropleth(
+            geojson=geojson,
+
+            locations=data["GeoDistrict"],
+
+            z=[1] * len(data),
+
+            featureidkey="properties.district",
+
+            colorscale=[
+                [0, category_colors[category]],
+                [1, category_colors[category]]
+            ],
+
+            zmin=0,
+            zmax=1,
+
+            showscale=False,
+
+            name=category,
+
+            marker_line_color="black",
+
+            marker_line_width=0.8,
+
+            customdata=customdata,
+
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "CCI: %{customdata[1]:.2f}<br>"
+                "Rank: %{customdata[2]}<br>"
+                "Category: " + category + "<br>"
+                "Rainfall Score: %{customdata[3]:.2f}<br>"
+                "Tmax Score: %{customdata[4]:.2f}<br>"
+                "Tmin Score: %{customdata[5]:.2f}<br>"
+                "DTR Score: %{customdata[6]:.2f}"
+                "<extra></extra>"
+            )
+        )
+    )
+
+
+# --------------------------------------------------
+# FIND DISTRICT LABEL POSITIONS
 # --------------------------------------------------
 
 label_data = []
 
 
-def get_points(coordinates):
+def extract_points(obj, points):
 
-    points = []
+    if isinstance(obj, list):
 
-    def extract(obj):
+        if (
+            len(obj) >= 2
+            and isinstance(obj[0], (int, float))
+            and isinstance(obj[1], (int, float))
+        ):
+            points.append(
+                (obj[0], obj[1])
+            )
 
-        if isinstance(obj, (list, tuple)):
+        else:
 
-            # Check whether this is [longitude, latitude]
-            if (
-                len(obj) >= 2
-                and isinstance(obj[0], (int, float))
-                and isinstance(obj[1], (int, float))
-            ):
+            for item in obj:
+                extract_points(item, points)
 
-                points.append(
-                    (obj[0], obj[1])
-                )
-
-            else:
-
-                for item in obj:
-                    extract(item)
-
-    extract(coordinates)
-
-    return points
-
-
-# --------------------------------------------------
-# CREATE DISTRICT LABELS
-# --------------------------------------------------
 
 for feature in geojson["features"]:
 
-    district_name = feature["properties"].get(
-        "district"
+    district = feature["properties"]["district"]
+
+    points = []
+
+    extract_points(
+        feature["geometry"]["coordinates"],
+        points
     )
 
-    geometry = feature.get("geometry")
-
-    if geometry is None:
+    if not points:
         continue
 
-    points = get_points(
-        geometry["coordinates"]
-    )
-
-    if len(points) == 0:
-        continue
-
-    longitude = sum(
-        point[0] for point in points
+    lon = sum(
+        p[0] for p in points
     ) / len(points)
 
-    latitude = sum(
-        point[1] for point in points
+    lat = sum(
+        p[1] for p in points
     ) / len(points)
 
     label_data.append(
         {
-            "District": district_name,
-            "lon": longitude,
-            "lat": latitude
+            "GeoDistrict": district,
+            "lon": lon,
+            "lat": lat
         }
     )
 
@@ -203,37 +242,35 @@ labels = pd.DataFrame(label_data)
 
 
 # --------------------------------------------------
-# ADD RANK TO LABEL DATA
+# ADD CCI INFORMATION TO LABELS
 # --------------------------------------------------
 
 labels = labels.merge(
     cci[
         [
+            "GeoDistrict",
             "District",
             "Rank"
         ]
     ],
-
-    on="District",
-
+    on="GeoDistrict",
     how="left"
 )
 
 
 # --------------------------------------------------
-# ADD DISTRICT NAME + RANK ON MAP
+# DISTRICT NAME + RANK
 # --------------------------------------------------
 
 fig.add_trace(
-
     go.Scattergeo(
-
         lon=labels["lon"],
-
         lat=labels["lat"],
 
         text=[
-            f"{district}<br>Rank: {rank}"
+            f"{district}<br>{int(rank)}"
+            if pd.notna(rank)
+            else district
             for district, rank
             in zip(
                 labels["District"],
@@ -248,33 +285,42 @@ fig.add_trace(
             color="black"
         ),
 
-        hoverinfo="text",
+        hoverinfo="skip",
 
         showlegend=False
-
     )
-
 )
 
 
 # --------------------------------------------------
-# ZOOM TO MAHARASHTRA
+# MAHARASHTRA ZOOM-IN
 # --------------------------------------------------
 
 fig.update_geos(
-
-    fitbounds="locations",
-
     visible=False,
 
     projection_type="mercator",
 
-    bgcolor="white",
+    center=dict(
+        lat=19.2,
+        lon=76.3
+    ),
+
+    projection_scale=10,
+
+    lonaxis=dict(
+        range=[72.4, 81.1]
+    ),
+
+    lataxis=dict(
+        range=[15.3, 22.3]
+    ),
 
     showland=False,
 
-    showocean=False
+    showocean=False,
 
+    showcountries=False
 )
 
 
@@ -283,17 +329,6 @@ fig.update_geos(
 # --------------------------------------------------
 
 fig.update_layout(
-
-    geo=dict(
-
-        center=dict(
-            lat=19.5,
-            lon=75.5
-        ),
-
-        projection_scale=7
-
-    ),
 
     height=700,
 
@@ -306,10 +341,14 @@ fig.update_layout(
 
     paper_bgcolor="white",
 
-    legend=dict(
-        title="CCI Category"
-    )
+    plot_bgcolor="white",
 
+    legend=dict(
+        title="CCI Category",
+        orientation="v",
+        x=0.90,
+        y=0.90
+    )
 )
 
 
@@ -319,7 +358,11 @@ fig.update_layout(
 
 st.plotly_chart(
     fig,
-    use_container_width=True
+    use_container_width=True,
+    config={
+        "scrollZoom": True,
+        "displayModeBar": True
+    }
 )
 
 
@@ -379,13 +422,8 @@ csv_data = cci.to_csv(
 )
 
 st.download_button(
-
     label="Download CCI Ranking (CSV)",
-
     data=csv_data,
-
     file_name="Maharashtra_CCI_Ranking.csv",
-
     mime="text/csv"
-
 )
