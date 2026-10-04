@@ -168,24 +168,6 @@ st.plotly_chart(
 )
 
 # ==========================================
-# DOWNLOAD MAP AS PNG
-# ==========================================
-
-map_image = fig.to_image(
-    format="png",
-    width=1400,
-    height=900,
-    scale=2
-)
-
-st.download_button(
-    label="Download Map as PNG",
-    data=map_image,
-    file_name="Maharashtra_CCI_Map.png",
-    mime="image/png"
-)
-
-# ==========================================
 # RANKING TABLE
 # ==========================================
 
