@@ -137,32 +137,6 @@ for _, row in gdf.iterrows():
                 showlegend=False
             )
         )
-
-# ==========================================
-# NORTH ARROW
-# ==========================================
-
-fig.add_annotation(
-    x=0.94,
-    y=0.18,
-    ax=0.94,
-    ay=0.30,
-    xref="paper",
-    yref="paper",
-    axref="paper",
-    ayref="paper",
-    text="N",
-    showarrow=True,
-    arrowhead=2,
-    arrowsize=1.5,
-    arrowwidth=3,
-    arrowcolor="black",
-    font=dict(
-        size=18,
-        color="black"
-    )
-)
-
 # ==========================================
 # MAP SETTINGS
 # ==========================================
