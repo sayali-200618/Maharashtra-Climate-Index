@@ -24,7 +24,7 @@ df = pd.read_excel(
 # 2. READ GEOJSON
 # --------------------------------------------------
 
-with open("maharashtra.geojson", "r", encoding="utf-8") as f:
+with open("Maharashtra_Districts_36.geojson", "r", encoding="utf-8") as f:
     geojson = json.load(f)
 
 # --------------------------------------------------
