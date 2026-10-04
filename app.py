@@ -270,7 +270,7 @@ fig = go.Figure()
 # =========================================================
 
 category_colors = {
-    "Low": "green",
+    "Low": "yellow",
     "Moderate": "orange",
     "High": "red",
 }
