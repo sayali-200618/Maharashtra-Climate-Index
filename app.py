@@ -334,13 +334,13 @@ fig.add_trace(
         hoverinfo="text",
 
            text=[
-       f"{district}<br>Rank {rank}"
-       for district, rank
-       in zip(
-            labels["District"],
-            labels["Rank"]
-            )
-       ],
+          f"{district}<br>Rank {rank}"
+            for district, rank
+            in zip(
+               labels["District"],
+               labels["Rank"]
+             )
+          ],
 
         showlegend=False
     )
