@@ -263,10 +263,7 @@ labels = labels.merge(
 st.subheader(
     "Maharashtra District Climate Change Map"
 )
-
-
 fig = go.Figure()
-
 
 # =========================================================
 # 11. CATEGORY COLOURS
@@ -363,7 +360,7 @@ for category in [
 
             marker_line_color="black",
 
-            marker_line_width=1.2,
+            marker_line_width=1.3,
 
             customdata=category_df[
                 [
@@ -450,7 +447,7 @@ fig.update_geos(
     fitbounds="locations",
     visible=False,
     showcountries=False,
-    showland=True,
+    showland=False,
     showcoastlines=False,
     projection_type="mercator"
 )
@@ -471,7 +468,7 @@ fig.update_layout(
     ),
 
     paper_bgcolor="#E8E8E8",
-    plot_bgcolor="#E8E8E8",
+    plot_bgcolor="black",
 
     legend=dict(
         title="CCI Category",
