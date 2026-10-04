@@ -254,8 +254,6 @@ labels = labels.merge(
     how="left"
 
 )
-
-
 # =========================================================
 # 10. CREATE MAP
 # =========================================================
@@ -263,20 +261,18 @@ labels = labels.merge(
 st.subheader(
     "Maharashtra District Climate Change Map"
 )
+
 fig = go.Figure()
+
 
 # =========================================================
 # 11. CATEGORY COLOURS
 # =========================================================
 
 category_colors = {
-
     "Low": "yellow",
-
     "Moderate": "orange",
-
     "High": "red",
-
 }
 
 
@@ -284,54 +280,31 @@ category_colors = {
 # 12. ADD THREE MAP LAYERS
 # =========================================================
 
-for category in [
-    "Low",
-    "Moderate",
-    "High"
-]:
+for category in ["Low", "Moderate", "High"]:
 
     category_df = df[
         df["CCI_Category"] == category
     ].copy()
 
-
-    # -----------------------------------------------------
-    # Keep only GeoJSON features belonging to this category
-    # -----------------------------------------------------
-
     category_names = set(
         category_df["GeoDistrict"]
     )
-
 
     category_features = []
 
     for feature in geojson["features"]:
 
-        district = (
-            feature["properties"]
-            .get("district")
+        district = feature["properties"].get(
+            "district"
         )
 
         if district in category_names:
-
-            category_features.append(
-                feature
-            )
-
+            category_features.append(feature)
 
     category_geojson = {
-
         "type": "FeatureCollection",
-
         "features": category_features
-
     }
-
-
-    # -----------------------------------------------------
-    # Add choropleth layer
-    # -----------------------------------------------------
 
     fig.add_trace(
 
@@ -343,9 +316,7 @@ for category in [
                 "GeoDistrict"
             ],
 
-            z=[
-                1
-            ] * len(category_df),
+            z=[1] * len(category_df),
 
             featureidkey="properties.district",
 
@@ -357,6 +328,8 @@ for category in [
             showscale=False,
 
             name=category,
+
+            showlegend=True,
 
             marker_line_color="black",
 
@@ -371,18 +344,14 @@ for category in [
             ].values,
 
             hovertemplate=(
-
                 "<b>%{customdata[0]}</b>"
                 "<br>PCA CCI: %{customdata[1]:.4f}"
                 "<br>Rank: %{customdata[2]}"
                 "<br>Category: "
                 + category
                 + "<extra></extra>"
-
             )
-
         )
-
     )
 
 
@@ -399,16 +368,12 @@ fig.add_trace(
         lat=labels["lat"],
 
         text=[
-
             f"{district}<br>Rank: {rank}"
-
             for district, rank
-
             in zip(
                 labels["District"],
                 labels["Rank"]
             )
-
         ],
 
         mode="text",
@@ -421,37 +386,46 @@ fig.add_trace(
         hoverinfo="text",
 
         hovertext=[
-
             f"{district}<br>Rank: {rank}"
-
             for district, rank
-
             in zip(
                 labels["District"],
                 labels["Rank"]
             )
-
         ],
 
         showlegend=False
-
     )
-
 )
 
 
 # =========================================================
-# 14. MAP SETTINGS
+# 14. MAHARASHTRA-ONLY MAP SETTINGS
 # =========================================================
 
 fig.update_geos(
+
     fitbounds="locations",
+
     visible=False,
+
     showcountries=False,
+
+    showsubunits=False,
+
     showland=False,
+
     showcoastlines=False,
+
     showframe=False,
-    projection_type="mercator"
+
+    bgcolor="white",
+
+    projection_type="mercator",
+
+    lataxis_showgrid=False,
+
+    lonaxis_showgrid=False
 )
 
 
@@ -460,30 +434,43 @@ fig.update_geos(
 # =========================================================
 
 fig.update_layout(
+
     height=700,
 
     margin=dict(
-        r=0,
+        r=10,
         t=20,
-        l=0,
-        b=0
+        l=10,
+        b=10
     ),
 
-    paper_bgcolor="#E8E8E8",
-    plot_bgcolor="#E8E8E8",
+    paper_bgcolor="white",
+
+    plot_bgcolor="white",
 
     legend=dict(
+
         title="CCI Category",
+
         orientation="v",
+
         yanchor="top",
+
         y=0.98,
+
         xanchor="right",
+
         x=0.98,
+
         bgcolor="white",
+
         bordercolor="black",
+
         borderwidth=1
     )
 )
+
+
 # =========================================================
 # 16. DISPLAY MAP
 # =========================================================
@@ -492,11 +479,13 @@ st.plotly_chart(
 
     fig,
 
-    use_container_width=True
+    use_container_width=True,
 
+    config={
+        "scrollZoom": False,
+        "displayModeBar": False
+    }
 )
-
-
 # =========================================================
 # 17. CATEGORY SUMMARY
 # =========================================================
