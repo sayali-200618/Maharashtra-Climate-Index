@@ -77,7 +77,11 @@ gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 m = folium.Map(
     location=[19.5, 75.5],
     zoom_start=6,
-    tiles="CartoDB positron"
+    tiles="CartoDB positron",
+    dragging=False,
+    scrollWheelZoom=True,
+    doubleClickZoom=True,
+    zoomControl=True
 )
 
 
