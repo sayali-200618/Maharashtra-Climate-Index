@@ -88,7 +88,7 @@ st.subheader("District Climate Map")
 fig = px.choropleth(
     df,
     geojson=geojson,
-    locations="District,
+    locations="District",
     featureidkey="properties.district",
     color="Overall Accessibility Score",
     hover_name="District Name",
