@@ -80,118 +80,214 @@ def classify_cci(value):
 gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 
 # ==========================================
-# MAHARASHTRA DISTRICT CCI MAP
+# READ GEOJSON DIRECTLY
 # ==========================================
 
-st.subheader("Maharashtra District CCI Map")
+with open(
+    "Maharashtra_Districts_36.geojson",
+    "r",
+    encoding="utf-8"
+) as f:
 
-# Make sure map coordinates are latitude/longitude
-if gdf.crs is not None:
-    gdf = gdf.to_crs(epsg=4326)
+    geojson = json.load(f)
 
-# Convert GeoDataFrame to GeoJSON
-geojson_data = json.loads(gdf.to_json())
 
 # ==========================================
-# CREATE CHOROPLETH MAP
+# CREATE DISTRICT LABEL POSITIONS
 # ==========================================
 
-fig = go.Figure()
+def get_all_points(coords):
 
-fig.add_trace(
-    go.Choropleth(
-        geojson=geojson_data,
-        locations=gdf["district"],
-        z=gdf["PCA_CCI"],
-        featureidkey="properties.district",
+    points = []
 
-        colorscale=[
-            [0.00, "#006837"],
-            [0.25, "#78c679"],
-            [0.50, "#ffffbf"],
-            [0.75, "#fdae61"],
-            [1.00, "#d73027"]
-        ],
+    def extract(obj):
 
-        marker_line_color="black",
-        marker_line_width=0.8,
+        if isinstance(obj, (list, tuple)):
 
-        colorbar=dict(
-            title="PCA CCI",
-            thickness=18,
-            len=0.70
-        ),
+            if (
+                len(obj) >= 2
+                and isinstance(obj[0], (int, float))
+            ):
 
-        hovertemplate=(
-            "<b>%{location}</b><br>"
-            "PCA CCI: %{z:.2f}<br>"
-            "<extra></extra>"
-        )
+                points.append(
+                    (obj[0], obj[1])
+                )
+
+            else:
+
+                for item in obj:
+                    extract(item)
+
+    extract(coords)
+
+    return points
+
+
+label_data = []
+
+for feature in geojson["features"]:
+
+    district_name = feature["properties"].get(
+        "district"
     )
+
+    geometry = feature["geometry"]
+
+    if geometry is None:
+        continue
+
+    points = get_all_points(
+        geometry["coordinates"]
+    )
+
+    if points:
+
+        avg_lon = sum(
+            p[0] for p in points
+        ) / len(points)
+
+        avg_lat = sum(
+            p[1] for p in points
+        ) / len(points)
+
+        label_data.append(
+            {
+                "District": district_name,
+                "lon": avg_lon,
+                "lat": avg_lat
+            }
+        )
+
+
+labels = pd.DataFrame(label_data)
+
+
+# ==========================================
+# MATCH RANK WITH DISTRICT
+# ==========================================
+
+labels = labels.merge(
+    cci[
+        ["District", "Rank"]
+    ],
+    left_on="District",
+    right_on="District",
+    how="left"
 )
+
+
+# ==========================================
+# CCI MAP
+# ==========================================
+
+st.subheader(
+    "Maharashtra District CCI Map"
+)
+
+fig = px.choropleth(
+
+    cci,
+
+    geojson=geojson,
+
+    locations="District",
+
+    featureidkey="properties.district",
+
+    color="PCA_CCI",
+
+    hover_name="District",
+
+    hover_data={
+        "PCA_CCI": ":.2f",
+        "Rank": True,
+        "Rainfall_Score": ":.2f",
+        "Tmax_Score": ":.2f",
+        "Tmin_Score": ":.2f",
+        "DTR_Score": ":.2f"
+    },
+
+    color_continuous_scale="RdYlGn_r"
+)
+
 
 # ==========================================
 # DISTRICT NAME + RANK
 # ==========================================
 
-for _, row in gdf.iterrows():
+fig.add_trace(
 
-    if row.geometry is not None and not row.geometry.is_empty:
+    go.Scattergeo(
 
-        point = row.geometry.representative_point()
+        lon=labels["lon"],
 
-        fig.add_trace(
-            go.Scattergeo(
-                lon=[point.x],
-                lat=[point.y],
+        lat=labels["lat"],
 
-                text=[
-                    f"{row['district']}<br>Rank: {row['Rank']}"
-                ],
-
-                mode="text",
-
-                textfont=dict(
-                    size=8,
-                    color="black"
-                ),
-
-                hoverinfo="skip",
-                showlegend=False
+        text=[
+            f"{name}<br>Rank: {rank}"
+            for name, rank in zip(
+                labels["District"],
+                labels["Rank"]
             )
-        )
+        ],
+
+        mode="text",
+
+        textfont=dict(
+            size=9
+        ),
+
+        hoverinfo="text",
+
+        hovertext=[
+            f"{name}<br>Rank: {rank}"
+            for name, rank in zip(
+                labels["District"],
+                labels["Rank"]
+            )
+        ],
+
+        showlegend=False
+    )
+)
+
 
 # ==========================================
 # MAP SETTINGS
 # ==========================================
 
 fig.update_geos(
+
     fitbounds="locations",
-    visible=False,
-    projection_type="mercator"
+
+    visible=False
 )
 
+
 fig.update_layout(
+
     height=700,
 
     margin=dict(
-        l=0,
         r=0,
-        t=10,
+        t=20,
+        l=0,
         b=0
-    ),
-
-    paper_bgcolor="white"
+    )
 )
+
 
 # ==========================================
 # DISPLAY MAP
 # ==========================================
 
 st.plotly_chart(
+
     fig,
+
     use_container_width=True
 )
+
 
 # ==========================================
 # RANKING TABLE
@@ -199,23 +295,35 @@ st.plotly_chart(
 
 st.subheader("CCI Ranking")
 
-ranking_table = cci.sort_values("Rank").copy()
+ranking_table = cci.sort_values(
+    "Rank"
+).copy()
 
 st.dataframe(
+
     ranking_table,
+
     use_container_width=True,
+
     hide_index=True
 )
+
 
 # ==========================================
 # DOWNLOAD CCI RANKING
 # ==========================================
 
-csv_data = cci.to_csv(index=False)
+csv_data = cci.to_csv(
+    index=False
+)
 
 st.download_button(
+
     label="Download CCI Ranking (CSV)",
+
     data=csv_data,
+
     file_name="Maharashtra_CCI_Ranking.csv",
+
     mime="text/csv"
 )
