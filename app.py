@@ -23,14 +23,6 @@ cci = pd.read_excel(
     sheet_name="Final_CCI_Ranking"
 )
 
-# -----------------------------
-# 2. Read Maharashtra GeoJSON
-# -----------------------------
-
-gdf = gpd.read_file(
-    "Maharashtra_Districts_36.geojson"
-)
-
 # ==========================================
 # MERGE CCI DATA WITH MAP
 # ==========================================
