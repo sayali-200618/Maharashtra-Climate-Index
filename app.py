@@ -219,89 +219,94 @@ category_colors = {
     "Moderate": "orange",
     "High": "red",
 }
-
-
 # =========================================================
-# 12. ADD THREE MAP LAYERS
+# 12. ADD MAP LAYER
 # =========================================================
 
-for category in ["Low", "Moderate", "High"]:
+category_code = {
+    "Low": 0,
+    "Moderate": 1,
+    "High": 2
+}
 
-    category_df = df[
-        df["CCI_Category"] == category
-    ].copy()
+df["Category_Code"] = df["CCI_Category"].map(category_code)
 
-    category_names = set(
-        category_df["GeoDistrict"]
+fig.add_trace(
+
+    go.Choropleth(
+
+        geojson=geojson,
+
+        locations=df["GeoDistrict"],
+
+        z=df["Category_Code"],
+
+        featureidkey="properties.district",
+
+        zmin=0,
+        zmax=2,
+
+        colorscale=[
+            [0.00, "yellow"],
+            [0.499, "yellow"],
+            [0.50, "orange"],
+            [0.999, "orange"],
+            [1.00, "red"]
+        ],
+
+        showscale=False,
+
+        marker_line_color="black",
+        marker_line_width=1.3,
+
+        customdata=df[
+            [
+                "District",
+                "PCA_CCI",
+                "Rank",
+                "CCI_Category"
+            ]
+        ].values,
+
+        hovertemplate=(
+            "<b>%{customdata[0]}</b>"
+            "<br>PCA CCI: %{customdata[1]:.4f}"
+            "<br>Rank: %{customdata[2]}"
+            "<br>Category: %{customdata[3]}"
+            "<extra></extra>"
+        ),
+
+        name="CCI"
     )
+)
 
-    category_features = []
 
-    for feature in geojson["features"]:
+# =========================================================
+# CATEGORY LEGEND
+# =========================================================
 
-        district = feature["properties"].get(
-            "district"
-        )
+for category, color in category_colors.items():
 
-        if district in category_names:
-            category_features.append(feature)
-
-    category_geojson = {
-        "type": "FeatureCollection",
-        "features": category_features
-    }
-    print(category, [f["properties"].get("district") for f in category_features])
     fig.add_trace(
 
-        go.Choropleth(
+        go.Scattergeo(
 
-            geojson=category_geojson,
+            lon=[None],
+            lat=[None],
 
-            locations=category_df[
-                "GeoDistrict"
-            ],
+            mode="markers",
 
-           z=[0] * len(category_df),
-
-           featureidkey="properties.district",
-
-           zmin=0,
-        zmax=1,
-
-          colorscale=[
-              [0, category_colors[category]],
-             [1, category_colors[category]]
-              ],
-
-            showscale=False,
+            marker=dict(
+                size=12,
+                color=color
+            ),
 
             name=category,
 
-            showlegend=True,
+            hoverinfo="skip"
 
-            marker_line_color="black",
-
-            marker_line_width=1.3,
-
-            customdata=category_df[
-                [
-                    "District",
-                    "PCA_CCI",
-                    "Rank"
-                ]
-            ].values,
-
-            hovertemplate=(
-                "<b>%{customdata[0]}</b>"
-                "<br>PCA CCI: %{customdata[1]:.4f}"
-                "<br>Rank: %{customdata[2]}"
-                "<br>Category: "
-                + category
-                + "<extra></extra>"
-            )
         )
     )
-
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK
 # =========================================================
