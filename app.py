@@ -167,43 +167,114 @@ labels = labels.merge(
 
 
 # --------------------------------------------------
-# 7. CHOROPLETH MAP
+# 7. CLIMATE CCI MAP
 # --------------------------------------------------
 
 st.subheader("Maharashtra District Climate Change Index Map")
 
+fig = go.Figure()
 
-fig = px.choropleth(
 
-    df,
+# Colours for CCI categories
+category_colors = {
+    "Low": "yellow",
+    "Moderate": "orange",
+    "High": "red"
+}
 
-    geojson=geojson,
 
-    locations="GeoDistrict",
+# Create one map layer for each CCI category
+for category in ["Low", "Moderate", "High"]:
 
-    featureidkey="properties.district",
+    category_df = df[
+        df["CCI_Category"] == category
+    ].copy()
 
-    color="PCA_CCI",
+    if category_df.empty:
+        continue
 
-    hover_name="District",
+    category_features = []
 
-    hover_data={
+    for district in category_df["GeoDistrict"]:
 
-        "PCA_CCI": ":.4f",
+        for feature in geojson["features"]:
 
-        "Rank": True,
+            if feature["properties"].get("district") == district:
 
-        "CCI_Category": True
+                category_features.append(feature)
 
-    },
+                break
 
-    color_continuous_scale="YlOrRd"
 
-)
+    category_geojson = {
+        "type": "FeatureCollection",
+        "features": category_features
+    }
+
+
+    fig.add_trace(
+
+        go.Choropleth(
+
+            geojson=category_geojson,
+
+            locations=category_df["GeoDistrict"],
+
+            z=[1] * len(category_df),
+
+            featureidkey="properties.district",
+
+            colorscale=[
+                [0, category_colors[category]],
+                [1, category_colors[category]]
+            ],
+
+            showscale=False,
+
+            marker=dict(
+
+                line=dict(
+
+                    color="black",
+
+                    width=1.5
+
+                )
+
+            ),
+
+            name=category,
+
+            hover_name=category_df["District"],
+
+            customdata=category_df[
+                [
+                    "PCA_CCI",
+                    "Rank"
+                ]
+            ].values,
+
+            hovertemplate=(
+
+                "<b>%{hovertext}</b><br>"
+
+                "PCA CCI: %{customdata[0]:.2f}<br>"
+
+                "Rank: %{customdata[1]}<br>"
+
+                "Category: " + category +
+
+                "<extra></extra>"
+
+            )
+
+        )
+
+    )
 
 
 # --------------------------------------------------
-# 8. PERMANENT DISTRICT NAME + RANK LABEL
+# 8. DISTRICT NAMES + RANK
 # --------------------------------------------------
 
 fig.add_trace(
@@ -216,11 +287,11 @@ fig.add_trace(
 
         text=[
 
-            f"{name}<br>Rank: {rank}"
+            f"{name}<br>Rank: {int(rank)}"
 
             for name, rank in zip(
 
-                labels["District_y"],
+                labels["District"],
 
                 labels["Rank"]
 
@@ -232,25 +303,13 @@ fig.add_trace(
 
         textfont=dict(
 
-            size=9
+            size=8,
+
+            color="black"
 
         ),
 
-        hoverinfo="text",
-
-        hovertext=[
-
-            f"{name}<br>Rank: {rank}"
-
-            for name, rank in zip(
-
-                labels["District_y"],
-
-                labels["Rank"]
-
-            )
-
-        ],
+        hoverinfo="skip",
 
         showlegend=False
 
@@ -267,7 +326,17 @@ fig.update_geos(
 
     fitbounds="locations",
 
-    visible=False
+    visible=False,
+
+    showcountries=False,
+
+    showcoastlines=False,
+
+    showland=False,
+
+    showocean=False,
+
+    showframe=False
 
 )
 
@@ -286,13 +355,48 @@ fig.update_layout(
 
         b=0
 
+    ),
+
+    legend=dict(
+
+        title="CCI Category",
+
+        x=0.85,
+
+        y=0.90,
+
+        bgcolor="white",
+
+        bordercolor="black",
+
+        borderwidth=1
+
     )
 
 )
 
 
+# --------------------------------------------------
+# 10. DISPLAY MAP
+# --------------------------------------------------
+
 st.plotly_chart(
 
+    fig,
+
+    use_container_width=True,
+
+    config={
+
+        "scrollZoom": True,
+
+        "displayModeBar": True,
+
+        "displaylogo": False
+
+    }
+
+)
     fig,
 
     use_container_width=True
