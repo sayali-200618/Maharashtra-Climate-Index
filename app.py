@@ -447,19 +447,13 @@ fig.add_trace(
 # =========================================================
 
 fig.update_geos(
-
     fitbounds="locations",
-
     visible=False,
-
     showcountries=False,
-
-    showland=False,
-
+    showland=True,
+    landcolor="#E8E8E8",
     showcoastlines=False,
-
     projection_type="mercator"
-
 )
 
 
