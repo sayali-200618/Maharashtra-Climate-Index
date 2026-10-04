@@ -270,7 +270,7 @@ fig = go.Figure()
 # =========================================================
 
 category_colors = {
-    "Low": "yellow",
+    "Low": "green",
     "Moderate": "orange",
     "High": "red",
 }
@@ -379,7 +379,7 @@ fig.add_trace(
         mode="text",
 
         textfont=dict(
-            size=9,
+            size=11,
             color="black"
         ),
 
@@ -435,7 +435,7 @@ fig.update_geos(
 
 fig.update_layout(
 
-    height=700,
+    height=900,
 
     margin=dict(
         r=10,
