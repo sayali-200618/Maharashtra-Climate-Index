@@ -302,7 +302,6 @@ for category in ["Low", "Moderate", "High"]:
         )
     )
 
-
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK
 # =========================================================
@@ -333,20 +332,18 @@ fig.add_trace(
 
         hoverinfo="text",
 
-           hovertext=[
-          f"{district}<br>Rank {rank}"
+        hovertext=[
+            f"{district}<br>Rank: {rank}"
             for district, rank
             in zip(
-               labels["District"],
-               labels["Rank"]
-             )
-          ],
+                labels["District"],
+                labels["Rank"]
+            )
+        ],
 
         showlegend=False
     )
 )
-
-
 # =========================================================
 # 14. MAHARASHTRA-ONLY MAP SETTINGS
 # =========================================================
