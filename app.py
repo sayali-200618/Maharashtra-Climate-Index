@@ -305,7 +305,7 @@ for category in ["Low", "Moderate", "High"]:
         "type": "FeatureCollection",
         "features": category_features
     }
-print(category, [f["properties"].get("district") for f in category_features])
+    print(category, [f["properties"].get("district") for f in category_features])
     fig.add_trace(
 
         go.Choropleth(
