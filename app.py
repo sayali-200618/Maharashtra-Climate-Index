@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
+import json
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -71,14 +72,17 @@ def classify_cci(value):
 gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 
 # ==========================================
-# PLOTLY CCI CHOROPLETH MAP
+# PLOTLY MAHARASHTRA DISTRICT CCI MAP
 # ==========================================
 
 st.subheader("Maharashtra District CCI Map")
 
+# Convert GeoDataFrame to proper GeoJSON
+geojson_data = json.loads(gdf.to_json())
+
 fig = px.choropleth(
     gdf,
-    geojson=gdf.__geo_interface__,
+    geojson=geojson_data,
     locations="district",
     featureidkey="properties.district",
     color="PCA_CCI",
@@ -95,7 +99,7 @@ fig = px.choropleth(
 )
 
 # ==========================================
-# DISTRICT NAME + RANK
+# DISTRICT NAMES + RANK
 # ==========================================
 
 for _, row in gdf.iterrows():
@@ -108,32 +112,33 @@ for _, row in gdf.iterrows():
             go.Scattergeo(
                 lon=[point.x],
                 lat=[point.y],
-                text=[f"{row['district']}<br>Rank: {row['Rank']}"],
+                text=f"{row['district']}<br>Rank: {row['Rank']}",
                 mode="text",
                 textfont=dict(
                     size=9,
                     color="black"
                 ),
-                hoverinfo="text",
+                hoverinfo="skip",
                 showlegend=False
             )
         )
 
 # ==========================================
-# MAP SETTINGS
+# FOCUS ONLY ON MAHARASHTRA
 # ==========================================
 
 fig.update_geos(
     fitbounds="locations",
-    visible=False
+    visible=False,
+    projection_type="mercator"
 )
 
 fig.update_layout(
     height=700,
     margin=dict(
+        l=0,
         r=0,
         t=20,
-        l=0,
         b=0
     ),
     coloraxis_colorbar=dict(
@@ -143,21 +148,13 @@ fig.update_layout(
     )
 )
 
-# Display map
 st.plotly_chart(
     fig,
     use_container_width=True
 )
 
 # ==========================================
-# RANKING TABLE
-# ==========================================
-
-st.subheader("CCI Ranking")
-
-st.dataframe(cci)
-# ==========================================
-# DOWNLOAD CCI RANKING
+# DOWNLOAD BUTTON
 # ==========================================
 
 csv_data = cci.to_csv(index=False)
