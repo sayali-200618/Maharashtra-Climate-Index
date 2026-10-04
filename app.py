@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import geopandas as gpd
 import json
-import plotly.express as px
 import plotly.graph_objects as go
 
 st.set_page_config(
@@ -16,6 +15,7 @@ st.write("District-wise Climate Change Index for Maharashtra (2000–2025)")
 # -----------------------------
 # 1. Read CCI data
 # -----------------------------
+
 file = "Maharashtra_36_Districts_PCA_CCI_Final_Ranking.xlsx"
 
 cci = pd.read_excel(
@@ -26,6 +26,7 @@ cci = pd.read_excel(
 # -----------------------------
 # 2. Read Maharashtra GeoJSON
 # -----------------------------
+
 gdf = gpd.read_file(
     "Maharashtra_Districts_36.geojson"
 )
@@ -35,9 +36,15 @@ gdf = gpd.read_file(
 # ==========================================
 
 cci_map = cci[
-    ["District", "PCA_CCI", "Rank",
-     "Rainfall_Score", "Tmax_Score",
-     "Tmin_Score", "DTR_Score"]
+    [
+        "District",
+        "PCA_CCI",
+        "Rank",
+        "Rainfall_Score",
+        "Tmax_Score",
+        "Tmin_Score",
+        "DTR_Score"
+    ]
 ].copy()
 
 cci_map["District"] = cci_map["District"].str.strip()
@@ -49,12 +56,13 @@ gdf = gdf.merge(
     right_on="District",
     how="left"
 )
+
 # ==========================================
 # QUANTILE CLASSIFICATION
 # ==========================================
 
-q33 = gdf["PCA_CCI"].quantile(1/3)
-q67 = gdf["PCA_CCI"].quantile(2/3)
+q33 = gdf["PCA_CCI"].quantile(1 / 3)
+q67 = gdf["PCA_CCI"].quantile(2 / 3)
 
 
 def classify_cci(value):
@@ -72,30 +80,37 @@ def classify_cci(value):
 gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 
 # ==========================================
-# PLOTLY MAHARASHTRA DISTRICT CCI MAP
+# MAHARASHTRA DISTRICT CCI MAP
 # ==========================================
 
 st.subheader("Maharashtra District CCI Map")
 
-# Convert GeoDataFrame to proper GeoJSON
+# Convert GeoDataFrame to GeoJSON
 geojson_data = json.loads(gdf.to_json())
 
-fig = px.choropleth(
-    gdf,
-    geojson=geojson_data,
-    locations="district",
-    featureidkey="properties.district",
-    color="PCA_CCI",
-    hover_name="district",
-    hover_data={
-        "PCA_CCI": ":.2f",
-        "Rank": True,
-        "Rainfall_Score": ":.2f",
-        "Tmax_Score": ":.2f",
-        "Tmin_Score": ":.2f",
-        "DTR_Score": ":.2f"
-    },
-    color_continuous_scale="RdYlGn_r"
+fig = go.Figure()
+
+# ==========================================
+# DISTRICT POLYGONS
+# ==========================================
+
+fig.add_trace(
+    go.Choropleth(
+        geojson=geojson_data,
+        locations=gdf["district"],
+        z=gdf["PCA_CCI"],
+        featureidkey="properties.district",
+        colorscale="RdYlGn_r",
+        marker_line_color="black",
+        marker_line_width=0.7,
+        colorbar=dict(
+            title="PCA CCI"
+        ),
+        hovertemplate=
+            "<b>%{location}</b><br>" +
+            "PCA CCI: %{z:.2f}<br>" +
+            "<extra></extra>"
+    )
 )
 
 # ==========================================
@@ -115,7 +130,7 @@ for _, row in gdf.iterrows():
                 text=f"{row['district']}<br>Rank: {row['Rank']}",
                 mode="text",
                 textfont=dict(
-                    size=9,
+                    size=8,
                     color="black"
                 ),
                 hoverinfo="skip",
@@ -124,13 +139,39 @@ for _, row in gdf.iterrows():
         )
 
 # ==========================================
-# FOCUS ONLY ON MAHARASHTRA
+# NORTH ARROW
+# ==========================================
+
+fig.add_annotation(
+    x=0.94,
+    y=0.18,
+    ax=0.94,
+    ay=0.30,
+    xref="paper",
+    yref="paper",
+    axref="paper",
+    ayref="paper",
+    text="N",
+    showarrow=True,
+    arrowhead=2,
+    arrowsize=1.5,
+    arrowwidth=3,
+    arrowcolor="black",
+    font=dict(
+        size=18,
+        color="black"
+    )
+)
+
+# ==========================================
+# MAP SETTINGS
 # ==========================================
 
 fig.update_geos(
     fitbounds="locations",
     visible=False,
-    projection_type="mercator"
+    projection_type="mercator",
+    bgcolor="white"
 )
 
 fig.update_layout(
@@ -140,13 +181,12 @@ fig.update_layout(
         r=0,
         t=20,
         b=0
-    ),
-    coloraxis_colorbar=dict(
-        title="PCA CCI",
-        thickness=20,
-        len=0.7
     )
 )
+
+# ==========================================
+# DISPLAY MAP
+# ==========================================
 
 st.plotly_chart(
     fig,
@@ -154,7 +194,39 @@ st.plotly_chart(
 )
 
 # ==========================================
-# DOWNLOAD BUTTON
+# DOWNLOAD MAP AS PNG
+# ==========================================
+
+map_image = fig.to_image(
+    format="png",
+    width=1400,
+    height=900,
+    scale=2
+)
+
+st.download_button(
+    label="Download Map as PNG",
+    data=map_image,
+    file_name="Maharashtra_CCI_Map.png",
+    mime="image/png"
+)
+
+# ==========================================
+# RANKING TABLE
+# ==========================================
+
+st.subheader("CCI Ranking")
+
+ranking_table = cci.sort_values("Rank").copy()
+
+st.dataframe(
+    ranking_table,
+    use_container_width=True,
+    hide_index=True
+)
+
+# ==========================================
+# DOWNLOAD CCI RANKING
 # ==========================================
 
 csv_data = cci.to_csv(index=False)
