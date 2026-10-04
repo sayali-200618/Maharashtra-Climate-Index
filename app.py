@@ -462,7 +462,7 @@ fig.update_layout(
 
         x=0.98,
 
-        bgcolor="white",
+        bgcolor="#FFFFFF",
 
         bordercolor="black",
 
