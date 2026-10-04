@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import geopandas as gpd
 import json
+import plotly.express as px
 import plotly.graph_objects as go
 
 st.set_page_config(
