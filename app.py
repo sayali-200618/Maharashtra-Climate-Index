@@ -75,7 +75,7 @@ labels = pd.DataFrame(label_data)
 labels = labels.merge(
     df[["District", "Rank"]]
     left_on="District",
-    right_on="District Name",
+    right_on="District",
     how="left"
 )
 
@@ -88,7 +88,7 @@ st.subheader("District Climate Map")
 fig = px.choropleth(
     df,
     geojson=geojson,
-    locations="District Name,
+    locations="District,
     featureidkey="properties.district",
     color="Overall Accessibility Score",
     hover_name="District Name",
