@@ -145,96 +145,41 @@ def classify_cci(value):
 df["CCI_Category"] = df["PCA_CCI"].apply(
     classify_cci
 )
-
-
 # =========================================================
 # 8. CREATE DISTRICT LABEL POSITIONS
 # =========================================================
 
-def get_all_points(coords):
-
-    points = []
-
-    def extract(obj):
-
-        if isinstance(obj, (list, tuple)):
-
-            if (
-                len(obj) >= 2
-                and isinstance(obj[0], (int, float))
-                and isinstance(obj[1], (int, float))
-            ):
-
-                points.append(
-                    (obj[0], obj[1])
-                )
-
-            else:
-
-                for item in obj:
-                    extract(item)
-
-    extract(coords)
-
-    return points
-
+from shapely.geometry import shape
 
 label_data = []
 
-
 for feature in geojson["features"]:
 
-    district_name = (
-        feature["properties"]
-        .get("district")
-    )
+    district_name = str(
+        feature["properties"].get("district")
+    ).strip()
 
     geometry = feature.get("geometry")
 
     if geometry is None:
         continue
 
-    coordinates = geometry.get(
-        "coordinates"
-    )
+    polygon = shape(geometry)
 
-    if coordinates is None:
-        continue
+    point = polygon.representative_point()
 
-    points = get_all_points(
-        coordinates
-    )
+    label_data.append({
 
-    if len(points) > 0:
+        "GeoDistrict": district_name,
 
-        avg_lon = (
-            sum(point[0] for point in points)
-            / len(points)
-        )
+        "lon": point.x,
 
-        avg_lat = (
-            sum(point[1] for point in points)
-            / len(points)
-        )
+        "lat": point.y
 
-        label_data.append({
-
-            "GeoDistrict": str(
-                district_name
-            ).strip(),
-
-            "lon": avg_lon,
-
-            "lat": avg_lat
-
-        })
+    })
 
 
-labels = pd.DataFrame(
-    label_data
-)
-
-
+labels = pd.DataFrame(label_data)
 # =========================================================
 # 9. ADD RANK TO LABEL DATA
 # =========================================================
@@ -388,14 +333,14 @@ fig.add_trace(
 
         hoverinfo="text",
 
-        hovertext=[
-            f"{district}<br>Rank: {rank}"
-            for district, rank
-            in zip(
-                labels["District"],
-                labels["Rank"]
+           text=[
+       f"{district}<br>Rank {rank}"
+       for district, rank
+       in zip(
+            labels["District"],
+            labels["Rank"]
             )
-        ],
+       ],
 
         showlegend=False
     )
@@ -405,18 +350,23 @@ fig.add_trace(
 # =========================================================
 # 14. MAHARASHTRA-ONLY MAP SETTINGS
 # =========================================================
-
 fig.update_geos(
 
     fitbounds="locations",
 
-    visible=False,
+    visible=True,
 
     showcountries=False,
 
     showsubunits=False,
 
-    showland=False,
+    showland=True,
+
+    landcolor="white",
+
+    showocean=True,
+
+    oceancolor="white",
 
     showcoastlines=False,
 
@@ -430,7 +380,6 @@ fig.update_geos(
 
     lonaxis_showgrid=False
 )
-
 
 # =========================================================
 # 15. LAYOUT
