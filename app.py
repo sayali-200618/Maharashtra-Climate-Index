@@ -316,14 +316,17 @@ for category in ["Low", "Moderate", "High"]:
                 "GeoDistrict"
             ],
 
-            z=[1] * len(category_df),
+           z=[1] * len(category_df),
 
-            featureidkey="properties.district",
+           featureidkey="properties.district",
 
-            colorscale=[
-                [0, category_colors[category]],
-                [1, category_colors[category]]
-            ],
+           zmin=0,
+        zmax=1,
+
+          colorscale=[
+              [0, category_colors[category]],
+             [1, category_colors[category]]
+              ],
 
             showscale=False,
 
