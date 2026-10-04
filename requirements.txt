@@ -5,5 +5,4 @@ geopandas
 matplotlib
 shapely
 pyogrio
-folium
-streamlit-folium
+plotly
