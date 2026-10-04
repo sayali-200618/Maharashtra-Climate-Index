@@ -414,7 +414,8 @@ fig.add_trace(
         mode="text",
 
         textfont=dict(
-            size=9
+            size=9,
+            color="black"
         ),
 
         hoverinfo="text",
@@ -449,6 +450,7 @@ fig.update_geos(
     showcountries=False,
     showland=False,
     showcoastlines=False,
+    showframe=False,
     projection_type="mercator"
 )
 
@@ -468,15 +470,18 @@ fig.update_layout(
     ),
 
     paper_bgcolor="#E8E8E8",
-    plot_bgcolor="black",
+    plot_bgcolor="#E8E8E8",
 
     legend=dict(
         title="CCI Category",
         orientation="v",
         yanchor="top",
         y=0.98,
-        xanchor="left",
-        x=0.01
+        xanchor="right",
+        x=0.98,
+        bgcolor="white",
+        bordercolor="black",
+        borderwidth=1
     )
 )
 # =========================================================
