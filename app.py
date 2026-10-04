@@ -436,8 +436,10 @@ fig.update_geos(
 fig.update_layout(
 
     height=900,
-
-    margin=dict(
+    geo=dict(
+    bgcolor="rgba(0,0,0,0)"
+),
+ margin=dict(
         r=10,
         t=20,
         l=10,
