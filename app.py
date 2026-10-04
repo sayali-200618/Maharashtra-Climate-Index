@@ -85,14 +85,18 @@ gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 
 st.subheader("Maharashtra District CCI Map")
 
+# Make sure map coordinates are latitude/longitude
+if gdf.crs is not None:
+    gdf = gdf.to_crs(epsg=4326)
+
 # Convert GeoDataFrame to GeoJSON
 geojson_data = json.loads(gdf.to_json())
 
-fig = go.Figure()
+# ==========================================
+# CREATE CHOROPLETH MAP
+# ==========================================
 
-# ==========================================
-# DISTRICT POLYGONS
-# ==========================================
+fig = go.Figure()
 
 fig.add_trace(
     go.Choropleth(
@@ -100,21 +104,34 @@ fig.add_trace(
         locations=gdf["district"],
         z=gdf["PCA_CCI"],
         featureidkey="properties.district",
-        colorscale="RdYlGn_r",
+
+        colorscale=[
+            [0.00, "#006837"],
+            [0.25, "#78c679"],
+            [0.50, "#ffffbf"],
+            [0.75, "#fdae61"],
+            [1.00, "#d73027"]
+        ],
+
         marker_line_color="black",
-        marker_line_width=0.7,
+        marker_line_width=0.8,
+
         colorbar=dict(
-            title="PCA CCI"
+            title="PCA CCI",
+            thickness=18,
+            len=0.70
         ),
-        hovertemplate=
-            "<b>%{location}</b><br>" +
-            "PCA CCI: %{z:.2f}<br>" +
+
+        hovertemplate=(
+            "<b>%{location}</b><br>"
+            "PCA CCI: %{z:.2f}<br>"
             "<extra></extra>"
+        )
     )
 )
 
 # ==========================================
-# DISTRICT NAMES + RANK
+# DISTRICT NAME + RANK
 # ==========================================
 
 for _, row in gdf.iterrows():
@@ -127,16 +144,23 @@ for _, row in gdf.iterrows():
             go.Scattergeo(
                 lon=[point.x],
                 lat=[point.y],
-                text=f"{row['district']}<br>Rank: {row['Rank']}",
+
+                text=[
+                    f"{row['district']}<br>Rank: {row['Rank']}"
+                ],
+
                 mode="text",
+
                 textfont=dict(
                     size=8,
                     color="black"
                 ),
+
                 hoverinfo="skip",
                 showlegend=False
             )
         )
+
 # ==========================================
 # MAP SETTINGS
 # ==========================================
@@ -144,18 +168,20 @@ for _, row in gdf.iterrows():
 fig.update_geos(
     fitbounds="locations",
     visible=False,
-    projection_type="mercator",
-    bgcolor="white"
+    projection_type="mercator"
 )
 
 fig.update_layout(
     height=700,
+
     margin=dict(
         l=0,
         r=0,
-        t=20,
+        t=10,
         b=0
-    )
+    ),
+
+    paper_bgcolor="white"
 )
 
 # ==========================================
