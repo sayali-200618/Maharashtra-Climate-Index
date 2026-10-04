@@ -261,7 +261,7 @@ for category in ["Low", "Moderate", "High"]:
                 "GeoDistrict"
             ],
 
-           z=[1] * len(category_df),
+           z=[0] * len(category_df),
 
            featureidkey="properties.district",
 
