@@ -345,50 +345,26 @@ fig.add_trace(
     )
 )
 # =========================================================
-# 14. MAHARASHTRA-ONLY MAP SETTINGS
+# 14. MAP SETTINGS
 # =========================================================
+
 fig.update_geos(
-
-    fitbounds="locations",
-
-    visible=True,
-
+    fitbounds="geojson",
+    visible=False,
     showcountries=False,
-
-    showsubunits=False,
-
-    showland=True,
-
-    landcolor="white",
-
-    showocean=True,
-
-    oceancolor="white",
-
+    showland=False,
     showcoastlines=False,
-
     showframe=False,
-
     bgcolor="white",
-
-    projection_type="mercator",
-
-    lataxis_showgrid=False,
-
-    lonaxis_showgrid=False
+    projection_type="mercator"
 )
-
 # =========================================================
 # 15. LAYOUT
 # =========================================================
-
 fig.update_layout(
-
     height=900,
-    geo=dict(
-    bgcolor="rgba(0,0,0,0)"
-),
- margin=dict(
+
+    margin=dict(
         r=10,
         t=20,
         l=10,
@@ -396,31 +372,17 @@ fig.update_layout(
     ),
 
     paper_bgcolor="white",
-
     plot_bgcolor="white",
 
     legend=dict(
-
         title="CCI Category",
-
         orientation="v",
-
         yanchor="top",
-
         y=0.98,
-
-        xanchor="right",
-
-        x=0.98,
-
-        bgcolor="#FFFFFF",
-
-        bordercolor="black",
-
-        borderwidth=1
+        xanchor="left",
+        x=0.01
     )
 )
-
 
 # =========================================================
 # 16. DISPLAY MAP
