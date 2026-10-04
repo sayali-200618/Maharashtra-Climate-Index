@@ -274,11 +274,11 @@ fig = go.Figure()
 
 category_colors = {
 
-    "Low": "#FFD700",
+    "Low": "yellow",
 
-    "Moderate": "#FFA500",
+    "Moderate": "orange",
 
-    "High": "#FF0000"
+    "High": "red",
 
 }
 
@@ -451,7 +451,6 @@ fig.update_geos(
     visible=False,
     showcountries=False,
     showland=True,
-    landcolor="#E8E8E8",
     showcoastlines=False,
     projection_type="mercator"
 )
@@ -462,7 +461,6 @@ fig.update_geos(
 # =========================================================
 
 fig.update_layout(
-
     height=700,
 
     margin=dict(
@@ -472,25 +470,18 @@ fig.update_layout(
         b=0
     ),
 
+    paper_bgcolor="#E8E8E8",
+    plot_bgcolor="#E8E8E8",
+
     legend=dict(
-
         title="CCI Category",
-
         orientation="v",
-
         yanchor="top",
-
         y=0.98,
-
         xanchor="left",
-
         x=0.01
-
     )
-
 )
-
-
 # =========================================================
 # 16. DISPLAY MAP
 # =========================================================
