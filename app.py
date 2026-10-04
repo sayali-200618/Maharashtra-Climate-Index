@@ -74,11 +74,12 @@ gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 # CREATE MAP
 # ==========================================
 m = folium.Map(
-    location=[19.5, 75.5],
-    zoom_start=7,
+    location=[19.75, 76.5],
+    zoom_start=8,
     tiles="OpenStreetMap",
     dragging=False,
-    scrollWheelZoom=True
+    scrollWheelZoom=True,
+    zoomControl=True
 )
 
 # ==========================================
