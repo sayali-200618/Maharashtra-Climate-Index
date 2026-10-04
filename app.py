@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
-import folium
-from streamlit_folium import st_folium
+import plotly.express as px
+import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Maharashtra Climate Change Index",
@@ -71,71 +71,31 @@ def classify_cci(value):
 gdf["CCI_Category"] = gdf["PCA_CCI"].apply(classify_cci)
 
 # ==========================================
-# CREATE MAP
+# PLOTLY CCI CHOROPLETH MAP
 # ==========================================
-m = folium.Map(
-    location=[19.75, 76.5],
-    zoom_start=8,
-    tiles="OpenStreetMap",
-    dragging=False,
-    scrollWheelZoom=True,
-    zoomControl=True
+
+st.subheader("Maharashtra District CCI Map")
+
+fig = px.choropleth(
+    gdf,
+    geojson=gdf.__geo_interface__,
+    locations="district",
+    featureidkey="properties.district",
+    color="PCA_CCI",
+    hover_name="district",
+    hover_data={
+        "PCA_CCI": ":.2f",
+        "Rank": True,
+        "Rainfall_Score": ":.2f",
+        "Tmax_Score": ":.2f",
+        "Tmin_Score": ":.2f",
+        "DTR_Score": ":.2f"
+    },
+    color_continuous_scale="RdYlGn_r"
 )
 
 # ==========================================
-# COLOURS
-# ==========================================
-
-def map_style(feature):
-
-    category = feature["properties"]["CCI_Category"]
-
-    if category == "Low":
-        color = "yellow"
-
-    elif category == "Moderate":
-        color = "orange"
-
-    else:
-        color = "red"
-
-    return {
-        "fillColor": color,
-        "color": "black",
-        "weight": 1,
-        "fillOpacity": 0.65
-    }
-
-
-# ==========================================
-# ADD DISTRICTS TO MAP
-# ==========================================
-
-folium.GeoJson(
-    gdf,
-    name="CCI Classification",
-    style_function=map_style,
-
-    tooltip=folium.GeoJsonTooltip(
-        fields=[
-            "district",
-            "PCA_CCI",
-            "CCI_Category",
-            "Rank"
-        ],
-
-        aliases=[
-            "District:",
-            "PCA CCI:",
-            "Category:",
-            "Rank:"
-        ],
-
-        localize=True
-    )
-).add_to(m)
-# ==========================================
-# ADD DISTRICT NAMES
+# DISTRICT NAME + RANK
 # ==========================================
 
 for _, row in gdf.iterrows():
@@ -144,125 +104,50 @@ for _, row in gdf.iterrows():
 
         point = row.geometry.representative_point()
 
-        folium.map.Marker(
-            [point.y, point.x],
-            icon=folium.DivIcon(
-                html=f"""
-                <div style="
-                    font-size: 9px;
-                    font-weight: bold;
-                    color: black;
-                    text-align: center;
-                    white-space: nowrap;
-                ">
-                    {row["district"]}
-                </div>
-                """
+        fig.add_trace(
+            go.Scattergeo(
+                lon=[point.x],
+                lat=[point.y],
+                text=[f"{row['district']}<br>Rank: {row['Rank']}"],
+                mode="text",
+                textfont=dict(
+                    size=9,
+                    color="black"
+                ),
+                hoverinfo="text",
+                showlegend=False
             )
-        ).add_to(m)
-# ==========================================
-# MAP LEGEND
-# ==========================================
-
-legend_html = f"""
-<div style="
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    z-index: 9999;
-    background-color: white;
-    border: 2px solid grey;
-    border-radius: 5px;
-    padding: 10px;
-    font-size: 13px;
-">
-
-<b>CCI Category</b><br><br>
-
-<div>
-<span style="
-    background-color: yellow;
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    margin-right: 6px;
-"></span>
-Low: ≤ {q33:.2f}
-</div>
-
-<div>
-<span style="
-    background-color: orange;
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    margin-right: 6px;
-"></span>
-Moderate: > {q33:.2f} – ≤ {q67:.2f}
-</div>
-
-<div>
-<span style="
-    background-color: red;
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    margin-right: 6px;
-"></span>
-High: > {q67:.2f}
-</div>
-
-</div>
-"""
-
-m.get_root().html.add_child(
-    folium.Element(legend_html)
-)
-# ==========================================
-# CATEGORY SUMMARY
-# ==========================================
-
-low_count = (gdf["CCI_Category"] == "Low").sum()
-moderate_count = (gdf["CCI_Category"] == "Moderate").sum()
-high_count = (gdf["CCI_Category"] == "High").sum()
-
-st.subheader("CCI Category Summary")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric("Low", low_count)
-
-with col2:
-    st.metric("Moderate", moderate_count)
-
-with col3:
-    st.metric("High", high_count)
-# ==========================================
-# SHOW CLASSIFICATION
-# ==========================================
-
-st.subheader("PCA Climate Change Index Classification")
-
-st.write(f"33.33rd Percentile: {q33:.2f}")
-st.write(f"66.67th Percentile: {q67:.2f}")
-
-st.write(f"🟡 Low: PCA_CCI ≤ {q33:.2f}")
-st.write(f"🟠 Moderate: {q33:.2f} < PCA_CCI ≤ {q67:.2f}")
-st.write(f"🔴 High: PCA_CCI > {q67:.2f}")
+        )
 
 # ==========================================
-# DISPLAY MAP
+# MAP SETTINGS
 # ==========================================
 
-st.subheader("Maharashtra District Map")
-
-st_folium(
-    m,
-    width=1200,
-    height=650
+fig.update_geos(
+    fitbounds="locations",
+    visible=False
 )
 
+fig.update_layout(
+    height=700,
+    margin=dict(
+        r=0,
+        t=20,
+        l=0,
+        b=0
+    ),
+    coloraxis_colorbar=dict(
+        title="PCA CCI",
+        thickness=20,
+        len=0.7
+    )
+)
+
+# Display map
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
 
 # ==========================================
 # RANKING TABLE
