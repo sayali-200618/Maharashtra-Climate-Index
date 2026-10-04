@@ -174,16 +174,12 @@ st.subheader("Maharashtra District Climate Change Index Map")
 
 fig = go.Figure()
 
-
-# Colours for CCI categories
 category_colors = {
     "Low": "yellow",
     "Moderate": "orange",
     "High": "red"
 }
 
-
-# Create one map layer for each CCI category
 for category in ["Low", "Moderate", "High"]:
 
     category_df = df[
@@ -202,119 +198,65 @@ for category in ["Low", "Moderate", "High"]:
             if feature["properties"].get("district") == district:
 
                 category_features.append(feature)
-
                 break
-
 
     category_geojson = {
         "type": "FeatureCollection",
         "features": category_features
     }
 
-
     fig.add_trace(
-
         go.Choropleth(
-
             geojson=category_geojson,
-
             locations=category_df["GeoDistrict"],
-
             z=[1] * len(category_df),
-
             featureidkey="properties.district",
-
             colorscale=[
                 [0, category_colors[category]],
                 [1, category_colors[category]]
             ],
-
             showscale=False,
-
-            marker=dict(
-
-                line=dict(
-
-                    color="black",
-
-                    width=1.5
-
-                )
-
-            ),
-
             name=category,
-
-            hover_name=category_df["District"],
-
-            customdata=category_df[
-                [
-                    "PCA_CCI",
-                    "Rank"
-                ]
-            ].values,
-
+            marker_line_color="black",
+            marker_line_width=1,
+            hovertext=category_df["District"],
             hovertemplate=(
-
                 "<b>%{hovertext}</b><br>"
-
-                "PCA CCI: %{customdata[0]:.2f}<br>"
-
-                "Rank: %{customdata[1]}<br>"
-
+                "PCA CCI: %{z}<br>"
                 "Category: " + category +
-
                 "<extra></extra>"
-
             )
-
         )
-
     )
 
 
 # --------------------------------------------------
-# 8. DISTRICT NAMES + RANK
+# 8. DISTRICT NAME + RANK
 # --------------------------------------------------
 
 fig.add_trace(
-
     go.Scattergeo(
-
         lon=labels["lon"],
-
         lat=labels["lat"],
-
         text=[
-
-            f"{name}<br>Rank: {int(rank)}"
-
+            f"{name}<br>Rank: {rank}"
             for name, rank in zip(
-
                 labels["District"],
-
                 labels["Rank"]
-
             )
-
         ],
-
         mode="text",
-
-        textfont=dict(
-
-            size=8,
-
-            color="black"
-
-        ),
-
-        hoverinfo="skip",
-
+        textfont=dict(size=9),
+        hoverinfo="text",
+        hovertext=[
+            f"{name}<br>Rank: {rank}"
+            for name, rank in zip(
+                labels["District"],
+                labels["Rank"]
+            )
+        ],
         showlegend=False
-
     )
-
 )
 
 
@@ -323,81 +265,41 @@ fig.add_trace(
 # --------------------------------------------------
 
 fig.update_geos(
-
     fitbounds="locations",
-
-    visible=False,
-
-    showcountries=False,
-
-    showcoastlines=False,
-
-    showland=False,
-
-    showocean=False,
-
-    showframe=False
-
+    visible=False
 )
-
 
 fig.update_layout(
-
     height=700,
-
     margin=dict(
-
         r=0,
-
         t=20,
-
         l=0,
-
         b=0
-
     ),
-
     legend=dict(
-
         title="CCI Category",
-
         x=0.85,
-
         y=0.90,
-
         bgcolor="white",
-
         bordercolor="black",
-
         borderwidth=1
-
     )
-
 )
-
-
 # --------------------------------------------------
 # 10. DISPLAY MAP
 # --------------------------------------------------
 
 st.plotly_chart(
-
     fig,
-
     use_container_width=True,
-
     config={
-
         "scrollZoom": True,
-
         "displayModeBar": True,
-
         "displaylogo": False
-
     }
-
 )
-   
+
 # --------------------------------------------------
 # 10. RESULT TABLE
 # --------------------------------------------------
