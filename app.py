@@ -219,7 +219,7 @@ category_colors = {
     "Moderate": "orange",
     "High": "red",
 }
-# =========================================================
+ # =========================================================
 # 12. ADD THREE MAP LAYERS
 # =========================================================
 
@@ -229,39 +229,15 @@ for category in ["Low", "Moderate", "High"]:
         df["CCI_Category"] == category
     ].copy()
 
-    category_names = set(
-        category_df["GeoDistrict"]
-    )
-
-    category_features = []
-
-    for feature in geojson["features"]:
-
-        district = feature["properties"].get(
-            "district"
-        )
-
-        if district in category_names:
-            category_features.append(feature)
-
-    category_geojson = {
-        "type": "FeatureCollection",
-        "features": category_features
-    }
-
-    print(
-        category,
-        [
-            f["properties"].get("district")
-            for f in category_features
-        ]
-    )
+    # IMPORTANT:
+    # Use the COMPLETE GeoJSON.
+    # Do NOT create category_geojson.
 
     fig.add_trace(
 
         go.Choropleth(
 
-            geojson=category_geojson,
+            geojson=geojson,
 
             locations=category_df[
                 "GeoDistrict"
@@ -306,6 +282,7 @@ for category in ["Low", "Moderate", "High"]:
             )
         )
     )
+
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK
 # =========================================================
@@ -353,7 +330,7 @@ fig.add_trace(
 # =========================================================
 
 fig.update_geos(
-    fitbounds="geojson",
+    fitbounds="locations"
     visible=False,
     showcountries=False,
     showland=False,
