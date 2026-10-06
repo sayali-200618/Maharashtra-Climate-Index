@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.graph_objects as go
-from shapely.geometry import shape
+
 
 # =========================================================
 # PAGE SETTINGS
@@ -219,81 +219,93 @@ category_colors = {
     "Moderate": "orange",
     "High": "red",
 }
- # =========================================================
-# 12. DRAW DISTRICTS DIRECTLY
+# =========================================================
+# 12. ADD THREE MAP LAYERS
 # =========================================================
 
-from shapely.geometry import shape
+for category in ["Low", "Moderate", "High"]:
 
-for feature in geojson["features"]:
+    category_df = df[
+        df["CCI_Category"] == category
+    ].copy()
 
-    geo_name = feature["properties"].get("district")
+    category_names = set(
+        category_df["GeoDistrict"]
+    )
 
-    # Find matching district in CCI data
-    district_data = df[
-        df["GeoDistrict"] == geo_name
-    ]
+    category_features = []
 
-    if district_data.empty:
-        continue
+    for feature in geojson["features"]:
 
-    district_data = district_data.iloc[0]
+        district = feature["properties"].get(
+            "district"
+        )
 
-    category = district_data["CCI_Category"]
+        if district in category_names:
+            category_features.append(feature)
 
-    fill_color = category_colors[category]
+    category_geojson = {
+        "type": "FeatureCollection",
+        "features": category_features
+    }
 
-    geometry = shape(feature["geometry"])
+    print(
+        category,
+        [
+            f["properties"].get("district")
+            for f in category_features
+        ]
+    )
 
-    # Polygon
-    if geometry.geom_type == "Polygon":
+    fig.add_trace(
 
-        polygons = [geometry]
+        go.Choropleth(
 
-    # MultiPolygon
-    elif geometry.geom_type == "MultiPolygon":
+            geojson=category_geojson,
 
-        polygons = list(geometry.geoms)
+            locations=category_df[
+                "GeoDistrict"
+            ],
 
-    else:
+            z=[0] * len(category_df),
 
-        continue
+            featureidkey="properties.district",
 
-    # Draw polygon
-    for polygon in polygons:
+            zmin=0,
+            zmax=1,
 
-        lon, lat = polygon.exterior.xy
+            colorscale=[
+                [0, category_colors[category]],
+                [1, category_colors[category]]
+            ],
 
-        fig.add_trace(
+            showscale=False,
 
-            go.Scattergeo(
+            name=category,
 
-                lon=list(lon),
-                lat=list(lat),
+            showlegend=True,
 
-                mode="lines",
+            marker_line_color="black",
+            marker_line_width=1.3,
 
-                fill="toself",
+            customdata=category_df[
+                [
+                    "District",
+                    "PCA_CCI",
+                    "Rank"
+                ]
+            ].values,
 
-                fillcolor=fill_color,
-
-                line=dict(
-                    color="black",
-                    width=1.3
-                ),
-
-                hovertext=(
-                    f"<b>{district_data['District']}</b>"
-                    f"<br>PCA CCI: {district_data['PCA_CCI']:.4f}"
-                    f"<br>Rank: {district_data['Rank']}"
-                    f"<br>Category: {category}"
-                ),
-
-                hoverinfo="text",
-
-                showlegend=False
+            hovertemplate=(
+                "<b>%{customdata[0]}</b>"
+                "<br>PCA CCI: %{customdata[1]:.4f}"
+                "<br>Rank: %{customdata[2]}"
+                "<br>Category: "
+                + category
+                + "<extra></extra>"
             )
         )
+    )
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK
 # =========================================================
@@ -341,6 +353,7 @@ fig.add_trace(
 # =========================================================
 
 fig.update_geos(
+    fitbounds="geojson",
     visible=False,
     showcountries=False,
     showland=False,
