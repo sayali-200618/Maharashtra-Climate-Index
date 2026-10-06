@@ -330,7 +330,7 @@ fig.add_trace(
 # =========================================================
 
 fig.update_geos(
-    fitbounds="locations"
+    fitbounds="locations",
     visible=False,
     showcountries=False,
     showland=False,
