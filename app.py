@@ -209,7 +209,6 @@ st.subheader(
 
 fig = go.Figure()
 
-
 # =========================================================
 # 11. CATEGORY COLOURS
 # =========================================================
@@ -217,95 +216,143 @@ fig = go.Figure()
 category_colors = {
     "Low": "yellow",
     "Moderate": "orange",
-    "High": "red",
+    "High": "red"
 }
+
+
 # =========================================================
-# 12. ADD THREE MAP LAYERS
+# 12. CREATE ONE MAP LAYER FOR ALL DISTRICTS
 # =========================================================
 
-for category in ["Low", "Moderate", "High"]:
+# Make a copy of the complete CCI data
+map_df = df.copy()
 
-    category_df = df[
-        df["CCI_Category"] == category
-    ].copy()
+# Convert categories to numerical values
+# Low = 1, Moderate = 2, High = 3
+map_df["Category_Code"] = map_df["CCI_Category"].map({
+    "Low": 1,
+    "Moderate": 2,
+    "High": 3
+})
 
-    category_names = set(
-        category_df["GeoDistrict"]
-    )
 
-    category_features = []
+# Create one fixed colour scale
+# 1 = Yellow
+# 2 = Orange
+# 3 = Red
 
-    for feature in geojson["features"]:
+colorscale = [
+    [0.00, "yellow"],
+    [0.3333, "yellow"],
 
-        district = feature["properties"].get(
-            "district"
-        )
+    [0.3334, "orange"],
+    [0.6666, "orange"],
 
-        if district in category_names:
-            category_features.append(feature)
+    [0.6667, "red"],
+    [1.00, "red"]
+]
 
-    category_geojson = {
-        "type": "FeatureCollection",
-        "features": category_features
-    }
 
-    print(
-        category,
-        [
-            f["properties"].get("district")
-            for f in category_features
-        ]
-    )
+fig.add_trace(
 
-    fig.add_trace(
+    go.Choropleth(
 
-        go.Choropleth(
+        # COMPLETE GeoJSON
+        geojson=geojson,
 
-            geojson=category_geojson,
+        # ALL 36 DISTRICTS
+        locations=map_df["GeoDistrict"],
 
-            locations=category_df[
-                "GeoDistrict"
-            ],
+        # Category values
+        z=map_df["Category_Code"],
 
-            z=[0] * len(category_df),
+        # Match district names
+        featureidkey="properties.district",
 
-            featureidkey="properties.district",
+        zmin=1,
+        zmax=3,
 
-            zmin=0,
-            zmax=1,
+        # Fixed colours
+        colorscale=colorscale,
 
-            colorscale=[
-                [0, category_colors[category]],
-                [1, category_colors[category]]
-            ],
+        # No continuous colour bar
+        showscale=False,
 
-            showscale=False,
+        name="CCI",
 
-            name=category,
+        # IMPORTANT: district boundaries
+        marker_line_color="black",
+        marker_line_width=1.2,
 
-            showlegend=True,
+        # Information shown on hover
+        customdata=map_df[
+            [
+                "District",
+                "PCA_CCI",
+                "Rank",
+                "CCI_Category"
+            ]
+        ].values,
 
-            marker_line_color="black",
-            marker_line_width=1.3,
-
-            customdata=category_df[
-                [
-                    "District",
-                    "PCA_CCI",
-                    "Rank"
-                ]
-            ].values,
-
-            hovertemplate=(
-                "<b>%{customdata[0]}</b>"
-                "<br>PCA CCI: %{customdata[1]:.4f}"
-                "<br>Rank: %{customdata[2]}"
-                "<br>Category: "
-                + category
-                + "<extra></extra>"
-            )
+        hovertemplate=(
+            "<b>%{customdata[0]}</b>"
+            "<br>PCA CCI: %{customdata[1]:.4f}"
+            "<br>Rank: %{customdata[2]}"
+            "<br>Category: %{customdata[3]}"
+            "<extra></extra>"
         )
     )
+)
+
+
+# =========================================================
+# 12A. ADD LEGEND ITEMS
+# =========================================================
+
+# These are only for showing Low / Moderate / High
+# in the legend.
+
+fig.add_trace(
+    go.Scattergeo(
+        lon=[None],
+        lat=[None],
+        mode="markers",
+        marker=dict(
+            size=10,
+            color="yellow"
+        ),
+        name="Low",
+        showlegend=True
+    )
+)
+
+fig.add_trace(
+    go.Scattergeo(
+        lon=[None],
+        lat=[None],
+        mode="markers",
+        marker=dict(
+            size=10,
+            color="orange"
+        ),
+        name="Moderate",
+        showlegend=True
+    )
+)
+
+fig.add_trace(
+    go.Scattergeo(
+        lon=[None],
+        lat=[None],
+        mode="markers",
+        marker=dict(
+            size=10,
+            color="red"
+        ),
+        name="High",
+        showlegend=True
+    )
+)
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK
 # =========================================================
@@ -355,13 +402,17 @@ fig.add_trace(
 fig.update_geos(
     fitbounds="geojson",
     visible=False,
+
     showcountries=False,
     showland=False,
     showcoastlines=False,
     showframe=False,
+
     bgcolor="white",
+
     projection_type="mercator"
 )
+
 # =========================================================
 # 15. LAYOUT
 # =========================================================
