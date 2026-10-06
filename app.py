@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import plotly.graph_objects as go
-
+from shapely.geometry import shape
 
 # =========================================================
 # PAGE SETTINGS
@@ -220,69 +220,80 @@ category_colors = {
     "High": "red",
 }
  # =========================================================
-# 12. ADD THREE MAP LAYERS
+# 12. DRAW DISTRICTS DIRECTLY
 # =========================================================
 
-for category in ["Low", "Moderate", "High"]:
+from shapely.geometry import shape
 
-    category_df = df[
-        df["CCI_Category"] == category
-    ].copy()
+for feature in geojson["features"]:
 
-    # IMPORTANT:
-    # Use the COMPLETE GeoJSON.
-    # Do NOT create category_geojson.
+    geo_name = feature["properties"].get("district")
 
-    fig.add_trace(
+    # Find matching district in CCI data
+    district_data = df[
+        df["GeoDistrict"] == geo_name
+    ]
 
-        go.Choropleth(
+    if district_data.empty:
+        continue
 
-            geojson=geojson,
+    district_data = district_data.iloc[0]
 
-            locations=category_df[
-                "GeoDistrict"
-            ],
+    category = district_data["CCI_Category"]
 
-            z=[0] * len(category_df),
+    fill_color = category_colors[category]
 
-            featureidkey="properties.district",
+    geometry = shape(feature["geometry"])
 
-            zmin=0,
-            zmax=1,
+    # Polygon
+    if geometry.geom_type == "Polygon":
 
-            colorscale=[
-                [0, category_colors[category]],
-                [1, category_colors[category]]
-            ],
+        polygons = [geometry]
 
-            showscale=False,
+    # MultiPolygon
+    elif geometry.geom_type == "MultiPolygon":
 
-            name=category,
+        polygons = list(geometry.geoms)
 
-            showlegend=True,
+    else:
 
-            marker_line_color="black",
-            marker_line_width=1.3,
+        continue
 
-            customdata=category_df[
-                [
-                    "District",
-                    "PCA_CCI",
-                    "Rank"
-                ]
-            ].values,
+    # Draw polygon
+    for polygon in polygons:
 
-            hovertemplate=(
-                "<b>%{customdata[0]}</b>"
-                "<br>PCA CCI: %{customdata[1]:.4f}"
-                "<br>Rank: %{customdata[2]}"
-                "<br>Category: "
-                + category
-                + "<extra></extra>"
+        lon, lat = polygon.exterior.xy
+
+        fig.add_trace(
+
+            go.Scattergeo(
+
+                lon=list(lon),
+                lat=list(lat),
+
+                mode="lines",
+
+                fill="toself",
+
+                fillcolor=fill_color,
+
+                line=dict(
+                    color="black",
+                    width=1.3
+                ),
+
+                hovertext=(
+                    f"<b>{district_data['District']}</b>"
+                    f"<br>PCA CCI: {district_data['PCA_CCI']:.4f}"
+                    f"<br>Rank: {district_data['Rank']}"
+                    f"<br>Category: {category}"
+                ),
+
+                hoverinfo="text",
+
+                showlegend=False
             )
         )
-    )
-
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK
 # =========================================================
@@ -330,7 +341,6 @@ fig.add_trace(
 # =========================================================
 
 fig.update_geos(
-    fitbounds="locations",
     visible=False,
     showcountries=False,
     showland=False,
