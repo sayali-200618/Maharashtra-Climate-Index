@@ -80,6 +80,13 @@ with open(
 ) as f:
 
     geojson = json.load(f)
+    print("GeoJSON type:", geojson.get("type"))
+
+print("First district properties:",
+      geojson["features"][0]["properties"])
+
+print("Total GeoJSON features:",
+      len(geojson["features"]))
 
 
 # =========================================================
