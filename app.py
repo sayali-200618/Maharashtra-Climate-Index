@@ -165,4 +165,4 @@ category_colors = {
 
 # Calculate center of Maharashtra dynamically to center our mapbox
 mean_lat = labels["lat"].mean() if not labels.empty else 19.7
-mean_lon = labels[
+mean_lon = labels[]
