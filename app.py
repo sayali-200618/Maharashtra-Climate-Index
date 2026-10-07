@@ -155,7 +155,7 @@ mean_lat = labels["lat"].mean() if not labels.empty else 19.7
 mean_lon = labels["lon"].mean() if not labels.empty else 75.7
 
 # =========================================================
-# 12. ADD THREE MAP LAYERS USING CHOROPLETHMAPBOX
+# 12. ADD THREE MAP LAYERS USING CHOROPLETHMAPBOX (Notice Capital M)
 # =========================================================
 for category in ["Low", "Moderate", "High"]:
     category_df = df[df["CCI_Category"] == category].copy()
@@ -173,7 +173,7 @@ for category in ["Low", "Moderate", "High"]:
     }
 
     fig.add_trace(
-        go.Choroplethmapbox(
+        go.ChoroplethMapbox(
             geojson=category_geojson,
             locations=category_df["GeoDistrict"],
             z=[0] * len(category_df),
@@ -201,10 +201,10 @@ for category in ["Low", "Moderate", "High"]:
     )
 
 # =========================================================
-# 13. ADD DISTRICT NAME + RANK USING SCATTERMAPBOX
+# 13. ADD DISTRICT NAME + RANK USING SCATTERMAPBOX (Notice Capital M)
 # =========================================================
 fig.add_trace(
-    go.Scattermapbox(
+    go.ScatterMapbox(
         lon=labels["lon"],
         lat=labels["lat"],
         text=[
