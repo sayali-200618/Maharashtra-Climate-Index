@@ -132,8 +132,7 @@ labels = pd.DataFrame(label_data)
 # =========================================================
 # 9. ADD RANK TO LABEL DATA
 # =========================================================
-labels = labels.merge(
-    df[["GeoDistrict", "District", "Rank"]],
+labels = labels.merge(    df[["GeoDistrict", "District", "Rank"]],
     on="GeoDistrict",
     how="left"
 )
