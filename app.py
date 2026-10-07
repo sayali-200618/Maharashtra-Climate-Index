@@ -128,4 +128,4 @@ df["CCI_Category"] = df["PCA_CCI"].apply(classify_cci)
 # 8. CREATE DISTRICT LABEL POSITIONS
 # =========================================================
 label_data = []
-for feature in geojson[
+for feature in geojson[]
