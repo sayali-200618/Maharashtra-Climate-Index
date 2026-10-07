@@ -1,3 +1,5 @@
+
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import json
@@ -7,20 +9,16 @@ from shapely.geometry import shape
 # =========================================================
 # PLOTLY VERSION COMPATIBILITY HELPER
 # =========================================================
-# Resolve Plotly Mapbox classes cleanly for both Plotly v5 (lowercase) and v6 (camel-case)
+# Dynamically resolve mapbox classes based on available attributes in the current Plotly version
 if hasattr(go, "ChoroplethMapbox"):
     ChoroplethMapboxClass = go.ChoroplethMapbox
-elif hasattr(go, "Choroplethmapbox"):
-    ChoroplethMapboxClass = go.Choroplethmapbox
 else:
-    ChoroplethMapboxClass = go.ChoroplethMapbox  # Default Fallback
+    ChoroplethMapboxClass = go.Choroplethmapbox
 
 if hasattr(go, "ScatterMapbox"):
     ScatterMapboxClass = go.ScatterMapbox
-elif hasattr(go, "Scattermapbox"):
-    ScatterMapboxClass = go.Scattermapbox
 else:
-    ScatterMapboxClass = go.ScatterMapbox  # Default Fallback
+    ScatterMapboxClass = go.Scattermapbox
 
 # =========================================================
 # PAGE SETTINGS
@@ -172,7 +170,7 @@ mean_lat = labels["lat"].mean() if not labels.empty else 19.7
 mean_lon = labels["lon"].mean() if not labels.empty else 75.7
 
 # =========================================================
-# 12. ADD THREE MAP LAYERS USING CHOROPLETHMAPBOX
+# 12. ADD THREE MAP LAYERS USING RESOLVED CHOROPLETHMAPBOX CLASS
 # =========================================================
 for category in ["Low", "Moderate", "High"]:
     category_df = df[df["CCI_Category"] == category].copy()
@@ -218,7 +216,7 @@ for category in ["Low", "Moderate", "High"]:
     )
 
 # =========================================================
-# 13. ADD DISTRICT NAME + RANK USING SCATTERMAPBOX
+# 13. ADD DISTRICT NAME + RANK USING RESOLVED SCATTERMAPBOX CLASS
 # =========================================================
 fig.add_trace(
     ScatterMapboxClass(
@@ -327,7 +325,6 @@ st.download_button(
 # =========================================================
 st.subheader("Download Map")
 try:
-    # Using the standard modern mapbox-to-image engine
     png_bytes = fig.to_image(format="png", width=1400, height=900, scale=2)
     st.download_button(
         label="Download Maharashtra CCI Map (PNG)",
