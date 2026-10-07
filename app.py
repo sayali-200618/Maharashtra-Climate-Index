@@ -1,23 +1,9 @@
+
 import streamlit as st
 import pandas as pd
 import json
 import plotly.graph_objects as go
 from shapely.geometry import shape
-
-# =========================================================
-# PLOTLY VERSION COMPATIBILITY HELPER
-# =========================================================
-# Resolve Plotly Mapbox classes cleanly using explicit try-except fallback
-# This bypasses the lazy importer issues with hasattr() on some environments
-try:
-    ChoroplethMapboxClass = go.ChoroplethMapbox
-except AttributeError:
-    ChoroplethMapboxClass = go.Choroplethmapbox
-
-try:
-    ScatterMapboxClass = go.ScatterMapbox
-except AttributeError:
-    ScatterMapboxClass = go.Scattermapbox
 
 # =========================================================
 # PAGE SETTINGS
@@ -159,17 +145,13 @@ st.subheader("Maharashtra District Climate Change Map")
 fig = go.Figure()
 
 category_colors = {
-    "Low": "#FFFF80",       # Soft, clean yellow
-    "Moderate": "#FFA500",  # Vibrant orange
-    "High": "#FF4D4D",      # Warning red
+    "Low": "yellow",
+    "Moderate": "orange",
+    "High": "red",
 }
 
-# Calculate center of Maharashtra dynamically to center our mapbox
-mean_lat = labels["lat"].mean() if not labels.empty else 19.7
-mean_lon = labels["lon"].mean() if not labels.empty else 75.7
-
 # =========================================================
-# 12. ADD THREE MAP LAYERS USING CHOROPLETHMAPBOX CLASS
+# 12. ADD THREE MAP LAYERS USING STANDARD CHOROPLETH
 # =========================================================
 for category in ["Low", "Moderate", "High"]:
     category_df = df[df["CCI_Category"] == category].copy()
@@ -187,7 +169,7 @@ for category in ["Low", "Moderate", "High"]:
     }
 
     fig.add_trace(
-        ChoroplethMapboxClass(
+        go.Choropleth(
             geojson=category_geojson,
             locations=category_df["GeoDistrict"],
             z=[0] * len(category_df),
@@ -201,9 +183,8 @@ for category in ["Low", "Moderate", "High"]:
             showscale=False,
             name=category,
             showlegend=True,
-            marker_opacity=0.85,
             marker_line_color="black",
-            marker_line_width=1.5,
+            marker_line_width=1.3,
             customdata=category_df[["District", "PCA_CCI", "Rank"]].values,
             hovertemplate=(
                 "<b>%{customdata[0]}</b>"
@@ -215,10 +196,10 @@ for category in ["Low", "Moderate", "High"]:
     )
 
 # =========================================================
-# 13. ADD DISTRICT NAME + RANK USING SCATTERMAPBOX CLASS
+# 13. ADD DISTRICT NAME + RANK USING STANDARD SCATTERGEO
 # =========================================================
 fig.add_trace(
-    ScatterMapboxClass(
+    go.Scattergeo(
         lon=labels["lon"],
         lat=labels["lat"],
         text=[
@@ -226,7 +207,7 @@ fig.add_trace(
             for district, rank in zip(labels["District"], labels["Rank"])
         ],
         mode="text",
-        textfont=dict(size=10, color="black", weight="bold"),
+        textfont=dict(size=11, color="black"),
         hoverinfo="text",
         hovertext=[
             f"{district}<br>Rank: {rank}"
@@ -237,15 +218,24 @@ fig.add_trace(
 )
 
 # =========================================================
-# 14. MAP SETTINGS WITH MAPBOX STYLE
+# 14. MAP SETTINGS
+# =========================================================
+fig.update_geos(
+    fitbounds="geojson",
+    visible=False,
+    showcountries=False,
+    showland=False,
+    showcoastlines=False,
+    showframe=False,
+    bgcolor="white",
+    projection_type="mercator"
+)
+
+# =========================================================
+# 15. LAYOUT
 # =========================================================
 fig.update_layout(
-    mapbox=dict(
-        style="open-street-map",
-        center=dict(lat=mean_lat, lon=mean_lon),
-        zoom=6.0
-    ),
-    height=800,
+    height=900,
     margin=dict(r=10, t=20, l=10, b=10),
     paper_bgcolor="white",
     plot_bgcolor="white",
@@ -263,8 +253,8 @@ st.plotly_chart(
     fig,
     use_container_width=True,
     config={
-        "scrollZoom": True,
-        "displayModeBar": True
+        "scrollZoom": False,
+        "displayModeBar": False
     }
 )
 
