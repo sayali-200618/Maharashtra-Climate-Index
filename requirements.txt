@@ -2,5 +2,7 @@ streamlit
 pandas
 openpyxl
 plotly
-kaleido
 shapely
+geojson
+geopandas
+kaleido
