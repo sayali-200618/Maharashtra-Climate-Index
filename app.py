@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import json
@@ -145,9 +144,9 @@ st.subheader("Maharashtra District Climate Change Map")
 fig = go.Figure()
 
 category_colors = {
-    "Low": "yellow",
-    "Moderate": "orange",
-    "High": "red",
+    "Low": "#FFFF99",       # Distinct Light Yellow
+    "Moderate": "#FFA500",  # Distinct Orange
+    "High": "#FF4D4D",      # Distinct Red
 }
 
 # =========================================================
@@ -168,32 +167,31 @@ for category in ["Low", "Moderate", "High"]:
         "features": category_features
     }
 
-    fig.add_trace(
-        go.Choropleth(
-            geojson=category_geojson,
-            locations=category_df["GeoDistrict"],
-            z=[0] * len(category_df),
-            featureidkey="properties.district",
-            zmin=0,
-            zmax=1,
-            colorscale=[
-                [0, category_colors[category]],
-                [1, category_colors[category]]
-            ],
-            showscale=False,
-            name=category,
-            showlegend=True,
-            marker_line_color="black",
-            marker_line_width=1.3,
-            customdata=category_df[["District", "PCA_CCI", "Rank"]].values,
-            hovertemplate=(
-                "<b>%{customdata[0]}</b>"
-                "<br>PCA CCI: %{customdata[1]:.4f}"
-                "<br>Rank: %{customdata[2]}"
-                "<br>Category: " + category + "<extra></extra>"
+    if not category_df.empty:
+        fig.add_trace(
+            go.Choropleth(
+                geojson=category_geojson,
+                locations=category_df["GeoDistrict"],
+                z=[1.0] * len(category_df),
+                featureidkey="properties.district",
+                colorscale=[
+                    [0, category_colors[category]],
+                    [1, category_colors[category]]
+                ],
+                showscale=False,
+                name=category,
+                showlegend=True,
+                marker_line_color="#333333",
+                marker_line_width=1.5,
+                customdata=category_df[["District", "PCA_CCI", "Rank"]].values,
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b>"
+                    "<br>PCA CCI: %{customdata[1]:.4f}"
+                    "<br>Rank: %{customdata[2]}"
+                    "<br>Category: " + category + "<extra></extra>"
+                )
             )
         )
-    )
 
 # =========================================================
 # 13. ADD DISTRICT NAME + RANK USING STANDARD SCATTERGEO
@@ -207,7 +205,7 @@ fig.add_trace(
             for district, rank in zip(labels["District"], labels["Rank"])
         ],
         mode="text",
-        textfont=dict(size=11, color="black"),
+        textfont=dict(size=10, color="black", weight="bold"),
         hoverinfo="text",
         hovertext=[
             f"{district}<br>Rank: {rank}"
@@ -235,7 +233,7 @@ fig.update_geos(
 # 15. LAYOUT
 # =========================================================
 fig.update_layout(
-    height=900,
+    height=800,
     margin=dict(r=10, t=20, l=10, b=10),
     paper_bgcolor="white",
     plot_bgcolor="white",
@@ -280,9 +278,9 @@ with col3:
 st.subheader("PCA Climate Change Index Classification")
 st.write(f"33.33rd Percentile: {q33:.4f}")
 st.write(f"66.67th Percentile: {q67:.4f}")
-st.write(f"🟡 Low: PCA_CCI ≤ {q33:.4f}")
-st.write(f"🟠 Moderate: {q33:.4f} < PCA_CCI ≤ {q67:.4f}")
-st.write(f"🔴 High: PCA_CCI > {q67:.4f}")
+st.write(f"\ud83d\udfe1 Low: PCA_CCI \u2264 {q33:.4f}")
+st.write(f"\ud83d\udfe0 Moderate: {q33:.4f} < PCA_CCI \u2264 {q67:.4f}")
+st.write(f"\ud83d\udd34 High: PCA_CCI > {q67:.4f}")
 
 # =========================================================
 # 19. RANKING TABLE
@@ -323,3 +321,4 @@ try:
     )
 except Exception as e:
     st.info("PNG download requires the kaleido package.")
+
