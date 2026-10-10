@@ -22,7 +22,7 @@ st.set_page_config(
 st.title("🌦️ Maharashtra Climate Change Index")
 st.subhedar("District-wise Climate Change Index for Maharashtra (2000–2025)")
 
- =========================================================
+# =========================================================
 # 1. READ EXCEL FILE
 # =========================================================
 excel_file = "Maharashtra_36_Districts_PCA_CCI_Final_Ranking.xlsx"
