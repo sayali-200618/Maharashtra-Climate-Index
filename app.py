@@ -20,7 +20,7 @@ st.set_page_config(
 # 2. PROJECT TITLE
 # ==========================================
 st.title("🌦️ Maharashtra Climate Change Index")
-st.subhedar("District-wise Climate Change Index for Maharashtra (2000–2025)")
+st.subheadar("District-wise Climate Change Index for Maharashtra (2000–2025)")
 
 # =========================================================
 # 1. READ EXCEL FILE
