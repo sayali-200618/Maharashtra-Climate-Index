@@ -1,26 +1,19 @@
-
-import json
-from pathlib import Path
-
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
+import pandas as pd
+import json
+import plotly.graph_objects as go
+from shapely.geometry import shape
 
-# ==========================================
-# 1. PAGE CONFIGURATION
-# ==========================================
+# =========================================================
+# PAGE SETTINGS
+# =========================================================
 st.set_page_config(
     page_title="Maharashtra Climate Change Index",
-    page_icon="🌦️",
     layout="wide"
 )
 
-# ==========================================
-# 2. PROJECT TITLE
-# ==========================================
-st.title("🌦️ Maharashtra Climate Change Index")
-st.subheadar("District-wise Climate Change Index for Maharashtra (2000–2025)")
+st.title("Maharashtra Climate Change Index")
+st.write("District-wise Climate Change Index for Maharashtra (2000–2025)")
 
 # =========================================================
 # 1. READ EXCEL FILE
@@ -34,7 +27,8 @@ try:
 except Exception as e:
     st.error(f"Could not find or read {excel_file}. Please ensure you upload this file to Colab. Error: {e}")
     st.stop()
-    # =========================================================
+
+# =========================================================
 # 2. CHECK REQUIRED COLUMNS
 # =========================================================
 required_columns = [
@@ -58,305 +52,235 @@ if missing_columns:
         + ", ".join(missing_columns)
     )
     st.stop()
-# ==========================================
-# 4. DISPLAY RANKING RESULTS
-# ==========================================
-if ranking is not None:
 
-    required_columns = ["Rank", "District", "PCA_CCI"]
+# =========================================================
+# 3. CLEAN DISTRICT NAMES
+# =========================================================
+df["District"] = (
+    df["District"]
+    .astype(str)
+    .str.strip()
+)
 
-    if all(col in ranking.columns for col in required_columns):
+# =========================================================
+# 4. READ GEOJSON
+# =========================================================
+geojson_file = "Maharashtra_Districts_36.geojson"
+try:
+    with open(
+        geojson_file,
+        "r",
+        encoding="utf-8"
+    ) as f:
+        geojson = json.load(f)
+except Exception as e:
+    st.error(f"Could not find or read {geojson_file}. Please run the previous notebook cells to build it first. Error: {e}")
+    st.stop()
 
-        ranking = ranking[required_columns].copy()
+# =========================================================
+# 5. NORMALIZE DISTRICT NAMES
+# =========================================================
+name_changes = {
+    "Chhatrapati Sambhaji Nagar": "Aurangabad",
+    "Chhatrapati Sambhajinagar": "Aurangabad",
+    "Sambhajinagar": "Aurangabad",
+    "Ahilyanagar": "Ahmednagar"
+}
 
-        ranking["Rank"] = pd.to_numeric(
-            ranking["Rank"], errors="coerce"
-        )
-        ranking["PCA_CCI"] = pd.to_numeric(
-            ranking["PCA_CCI"], errors="coerce"
-        )
+df["GeoDistrict"] = (
+    df["District"]
+    .replace(name_changes)
+    .str.strip()
+)
 
-        ranking = ranking.dropna(
-            subset=["Rank", "District", "PCA_CCI"]
-        )
+# =========================================================
+# 7. QUANTILE CLASSIFICATION
+# =========================================================
+q33 = df["PCA_CCI"].quantile(1 / 3)
+q67 = df["PCA_CCI"].quantile(2 / 3)
 
-        ranking["Rank"] = ranking["Rank"].astype(int)
-        ranking = ranking.sort_values("Rank")
-
-        st.success("Climate index ranking loaded successfully!")
-
-        # Summary metrics
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric(
-                "Districts Included",
-                ranking["District"].nunique()
-            )
-
-        with col2:
-            st.metric(
-                "Highest PCA CCI",
-                f"{ranking['PCA_CCI'].max():.4f}"
-            )
-
-        with col3:
-            st.metric(
-                "Lowest PCA CCI",
-                f"{ranking['PCA_CCI'].min():.4f}"
-            )
-
-        st.divider()
-
-        # Ranking table
-        st.header("District-Wise CCI Ranking")
-
-        st.dataframe(
-            ranking,
-            use_container_width=True,
-            hide_index=True
-        )
-
-        # Bar chart
-        st.header("Compare Districts")
-
-        chart_data = ranking.sort_values(
-            "PCA_CCI", ascending=False
-        )
-
-        fig = px.bar(
-            chart_data,
-            x="District",
-            y="PCA_CCI",
-            hover_data=["Rank"],
-            title="PCA-Based Climate Change Index by District",
-            labels={
-                "District": "District",
-                "PCA_CCI": "PCA-Based CCI"
-            }
-        )
-
-        fig.update_layout(
-            xaxis_tickangle=-60,
-            height=600
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-        # Download results
-        st.download_button(
-            label="Download CCI Ranking CSV",
-            data=ranking.to_csv(index=False).encode("utf-8"),
-            file_name="Maharashtra_CCI_Ranking.csv",
-            mime="text/csv"
-        )
-
+def classify_cci(value):
+    if value <= q33:
+        return "Low"
+    elif value <= q67:
+        return "Moderate"
     else:
-        st.error(
-            "The CSV must contain these columns: "
-            "Rank, District, PCA_CCI. "
-            f"Columns found: {list(ranking.columns)}"
-        )
+        return "High"
 
-else:
-    st.warning(
-        "CCI_Ranking.csv was not found. "
-        "Upload it using the sidebar or add it "
-        "to the GitHub repository."
-    )
+df["CCI_Category"] = df["PCA_CCI"].apply(classify_cci)
 
-# ==========================================
-# 5. MAHARASHTRA DISTRICT MAP
-# ==========================================
-st.divider()
-st.header("Maharashtra Climate Change Index Map")
+# =========================================================
+# 8. CREATE DISTRICT LABEL POSITIONS
+# =========================================================
+label_data = []
+for feature in geojson["features"]:
+    district_name = str(feature["properties"].get("district")).strip()
+    geometry = feature.get("geometry")
+    if geometry is None:
+        continue
+    polygon = shape(geometry)
+    point = polygon.representative_point()
+    label_data.append({
+        "GeoDistrict": district_name,
+        "lon": point.x,
+        "lat": point.y
+    })
 
-geojson_path = Path("Maharashtra_CCI_Map.geojson")
+labels = pd.DataFrame(label_data)
 
-if geojson_path.exists():
+# =========================================================
+# 9. ADD RANK TO LABEL DATA
+# =========================================================
+labels = labels.merge(
+    df[["GeoDistrict", "District", "Rank"]],
+    on="GeoDistrict",
+    how="left"
+)
 
-    try:
-        with open(
-            geojson_path, "r", encoding="utf-8"
-        ) as file:
-            geojson_data = json.load(file)
+# =========================================================
+# 10. CREATE MAP
+# =========================================================
+st.subheader("Maharashtra District Climate Change Map")
+fig = go.Figure()
 
-        features = geojson_data.get("features", [])
+category_colors = {
+    "Low": "#FFFF99",       # Distinct Light Yellow
+    "Moderate": "#FFA500",  # Distinct Orange
+    "High": "#FF4D4D",      # Distinct Red
+}
 
-        # Read district attributes from GeoJSON
-        map_df = pd.DataFrame([
-            feature.get("properties", {})
-            for feature in features
-        ])
+# =========================================================
+# 12. ADD THREE MAP LAYERS USING STANDARD CHOROPLETH
+# =========================================================
+for category in ["Low", "Moderate", "High"]:
+    category_df = df[df["CCI_Category"] == category].copy()
+    category_names = set(category_df["GeoDistrict"])
+    category_features = []
 
-        required_map_columns = [
-            "Map_District",
-            "District",
-            "Rank",
-            "PCA_CCI",
-            "Category"
-        ]
+    for feature in geojson["features"]:
+        district = feature["properties"].get("district")
+        if district in category_names:
+            category_features.append(feature)
 
-        if not all(
-            col in map_df.columns
-            for col in required_map_columns
-        ):
-            st.error(
-                "The GeoJSON file is missing required columns. "
-                "Please check Map_District, District, Rank, "
-                "PCA_CCI, and Category."
-            )
+    category_geojson = {
+        "type": "FeatureCollection",
+        "features": category_features
+    }
 
-        else:
-            map_df["PCA_CCI"] = pd.to_numeric(
-                map_df["PCA_CCI"], errors="coerce"
-            )
-            map_df["Rank"] = pd.to_numeric(
-                map_df["Rank"], errors="coerce"
-            )
-
-            map_df = map_df.dropna(
-                subset=[
-                    "Map_District",
-                    "District",
-                    "Rank",
-                    "PCA_CCI"
-                ]
-            ).copy()
-
-            # Ensure feature identifiers are strings
-            map_df["Map_District"] = (
-                map_df["Map_District"].astype(str)
-            )
-
-            for feature in features:
-                props = feature.get("properties", {})
-                if "Map_District" in props:
-                    props["Map_District"] = str(
-                        props["Map_District"]
-                    )
-
-            # Build the district choropleth map
-            fig_map = px.choropleth(
-                map_df,
-                geojson=geojson_data,
-                locations="Map_District",
-                featureidkey="properties.Map_District",
-                color="PCA_CCI",
-                hover_name="District",
-                hover_data={
-                    "Rank": True,
-                    "PCA_CCI": ":.2f",
-                    "Category": True,
-                    "Map_District": False
-                },
-                color_continuous_scale="YlOrRd",
-                projection="mercator",
-                title="District-wise Climate Change Index"
-            )
-
-            # Fit the geographic view to the district shapes
-            fig_map.update_geos(
-                fitbounds="locations",
-                visible=False
-            )
-
-            # Add district names using geographic label points.
-            # For polygons, use the mean of their exterior vertices
-            # as an approximate label position.
-            label_lons = []
-            label_lats = []
-            label_names = []
-
-            for feature in features:
-                props = feature.get("properties", {})
-                district_name = props.get("District")
-
-                if not district_name:
-                    district_name = props.get("Map_District")
-
-                geometry = feature.get("geometry", {})
-                geom_type = geometry.get("type")
-                coords = geometry.get("coordinates", [])
-
-                # Handle Polygon and MultiPolygon geometries
-                polygons = []
-
-                if geom_type == "Polygon":
-                    polygons = [coords]
-                elif geom_type == "MultiPolygon":
-                    polygons = coords
-
-                # Use the largest exterior ring for label position
-                best_ring = None
-                best_size = 0
-
-                for polygon in polygons:
-                    if polygon and polygon[0]:
-                        ring = polygon[0]
-                        if len(ring) > best_size:
-                            best_ring = ring
-                            best_size = len(ring)
-
-                if best_ring and district_name:
-                    lon = sum(point[0] for point in best_ring) / len(best_ring)
-                    lat = sum(point[1] for point in best_ring) / len(best_ring)
-
-                    label_lons.append(lon)
-                    label_lats.append(lat)
-                    label_names.append(str(district_name))
-
-            # Overlay labels on the map
-            if label_names:
-                fig_map.add_trace(
-                    go.Scattergeo(
-                        lon=label_lons,
-                        lat=label_lats,
-                        text=label_names,
-                        mode="text",
-                        textfont=dict(
-                            size=8,
-                            color="black"
-                        ),
-                        hoverinfo="skip",
-                        showlegend=False
-                    )
-                )
-
-            fig_map.update_layout(
-                height=750,
-                margin=dict(
-                    l=10, r=10, t=60, b=10
-                ),
-                coloraxis_colorbar=dict(
-                    title="PCA CCI"
+    if not category_df.empty:
+        fig.add_trace(
+            go.Choropleth(
+                geojson=category_geojson,
+                locations=category_df["GeoDistrict"],
+                z=[1.0] * len(category_df),
+                featureidkey="properties.district",
+                colorscale=[
+                    [0, category_colors[category]],
+                    [1, category_colors[category]]
+                ],
+                showscale=False,
+                name=category,
+                showlegend=True,
+                marker_line_color="#333333",
+                marker_line_width=1.5,
+                customdata=category_df[["District", "PCA_CCI", "Rank"]].values,
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b>"
+                    "<br>PCA CCI: %{customdata[1]:.4f}"
+                    "<br>Rank: %{customdata[2]}"
+                    "<br>Category: " + category + "<extra></extra>"
                 )
             )
-
-            st.plotly_chart(
-                fig_map,
-                use_container_width=True
-            )
-
-            st.caption(
-                "District colors represent PCA CCI scores. "
-                "Hover over a district to see its score, "
-                "rank, and category. Text labels identify districts."
-            )
-
-    except Exception as error:
-        st.error(
-            f"Unable to display the district map: {error}"
         )
 
-else:
-    st.warning(
-        "Maharashtra_CCI_Map.geojson was not found. "
-        "Upload this file to the same GitHub folder as app.py."
+# =========================================================
+# 13. ADD DISTRICT NAME + RANK USING STANDARD SCATTERGEO
+# =========================================================
+fig.add_trace(
+    go.Scattergeo(
+        lon=labels["lon"],
+        lat=labels["lat"],
+        text=[
+            f"{district}<br>Rank: {rank}"
+            for district, rank in zip(labels["District"], labels["Rank"])
+        ],
+        mode="text",
+        textfont=dict(size=10, color="black", weight="bold"),
+        hoverinfo="text",
+        hovertext=[
+            f"{district}<br>Rank: {rank}"
+            for district, rank in zip(labels["District"], labels["Rank"])
+        ],
+        showlegend=False
     )
+)
+
+# =========================================================
+# 14. MAP SETTINGS
+# =========================================================
+fig.update_geos(
+    fitbounds="geojson",
+    visible=False,
+    showcountries=False,
+    showland=False,
+    showcoastlines=False,
+    showframe=False,
+    bgcolor="white",
+    projection_type="mercator"
+)
+
+# =========================================================
+# 15. LAYOUT
+# =========================================================
+fig.update_layout(
+    height=800,
+    margin=dict(r=10, t=20, l=10, b=10),
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+    legend=dict(
+        title="CCI Category",
+        orientation="v",
+        yanchor="top",
+        y=0.98,
+        xanchor="left",
+        x=0.01
+    )
+)
+
+st.plotly_chart(
+    fig,
+    use_container_width=True,
+    config={
+        "scrollZoom": False,
+        "displayModeBar": False
+    }
+)
+
+# =========================================================
+# 17. CATEGORY SUMMARY
+# =========================================================
+st.subheader("CCI Category Summary")
+low_count = (df["CCI_Category"] == "Low").sum()
+moderate_count = (df["CCI_Category"] == "Moderate").sum()
+high_count = (df["CCI_Category"] == "High").sum()
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Low", low_count)
+with col2:
+    st.metric("Moderate", moderate_count)
+with col3:
+    st.metric("High", high_count)
+
+# =========================================================
+# 18. CLASSIFICATION THRESHOLDS
+# =========================================================
+st.subheader("PCA Climate Change Index Classification")
+st.write(f"33.33rd Percentile: {q33:.4f}")
+st.write(f"66.67th Percentile: {q67:.4f}")
+st.write(f"\ud83d\udfe1 Low: PCA_CCI \u2264 {q33:.4f}")
+st.write(f"\ud83d\udfe0 Moderate: {q33:.4f} < PCA_CCI \u2264 {q67:.4f}")
+st.write(f"\ud83d\udd34 High: PCA_CCI > {q67:.4f}")
 
 # =========================================================
 # 19. RANKING TABLE
@@ -397,3 +321,4 @@ try:
     )
 except Exception as e:
     st.info("PNG download requires the kaleido package.")
+
