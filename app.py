@@ -877,7 +877,6 @@ if ranking is not None:
 # ============================================================
 
 st.divider()
-
 st.header("🗺️ Maharashtra District CCI Map")
 
 st.markdown(
@@ -887,21 +886,19 @@ st.markdown(
     - **Q1 – Highest CCI**
     - **Q2 – Medium CCI**
     - **Q3 – Lowest CCI**
+    """
 )
-if ranking is None:
 
+if ranking is None:
     st.warning("Load the CCI ranking data before displaying the map.")
 
 else:
-
     try:
         boundaries = None
 
-        # Load GeoJSON automatically from GitHub repository
+        # Load GeoJSON from project folder
         for map_path in MAP_CANDIDATES:
-
             if map_path.exists():
-
                 boundaries = read_geojson_path(
                     str(map_path),
                     map_path.stat().st_mtime,
@@ -910,21 +907,18 @@ else:
 
         # Online GeoJSON fallback
         if boundaries is None:
-
             try:
                 boundaries = gpd.read_file(MAP_URL)
-
-            except Exception:
-                boundaries = None
+            except Exception as exc:
+                st.warning(f"Online map unavailable: {exc}")
 
         if boundaries is None:
-
             st.error(
-                "Maharashtra district GeoJSON file not found."
+                "Maharashtra district GeoJSON file not found. "
+                "Please add a GeoJSON file to your repository."
             )
 
         else:
-
             map_data, district_col = merge_cci_map(
                 boundaries,
                 ranking,
@@ -942,11 +936,9 @@ else:
             )
 
             if matched_count == 0:
-
                 st.error("No districts matched.")
 
             else:
-
                 fig_map = draw_cci_district_map(
                     map_data,
                     district_col,
@@ -959,70 +951,7 @@ else:
 
                 plt.close(fig_map)
 
-    except Exception as exc:
-
-        st.error(f"Unable to generate CCI district map: {exc}")
-
-if ranking is None:
-
-    st.warning(
-        "Load the CCI ranking data before displaying the map."
-    )
-
-else:
-
-    try:
-
-        boundaries = None
-
- 
-        if boundaries is None:
-
-            st.info(
-                "Upload a district boundary GeoJSON file, "
-                "or add a supported GeoJSON file to your "
-                "project folder."
-            )
-
-        else:
-
-            map_data, district_col = merge_cci_map(
-                boundaries,
-                ranking,
-            )
-
-            matched_count = int(
-                map_data["CCI_Group"]
-                .isin(CCI_GROUPS)
-                .sum()
-            )
-
-            st.write(
-                f"Matched districts: {matched_count} "
-                f"out of {len(ranking)} ranking records."
-            )
-
-            if matched_count == 0:
-
-                st.error(
-                    "No districts matched. Check district names "
-                    "in your CSV and GeoJSON boundary file."
-                )
-
-            else:
-
-                fig_map = draw_cci_district_map(
-                    map_data,
-                    district_col,
-                )
-
-                st.pyplot(
-                    fig_map,
-                    use_container_width=True,
-                )
-
-                plt.close(fig_map)
-
+                # CCI Group Summary
                 st.subheader("CCI Group Summary")
 
                 group_summary = (
@@ -1042,10 +971,10 @@ else:
                     hide_index=True,
                 )
 
+                # Merged district information
                 with st.expander(
                     "View merged district map data"
                 ):
-
                     map_display = map_data[
                         [
                             district_col,
@@ -1066,17 +995,14 @@ else:
                     )
 
     except Exception as exc:
-
         st.error(
             f"Unable to generate CCI district map: {exc}"
         )
 
         st.info(
-            "Check that the ranking CSV contains district names, "
-            "and that the GeoJSON contains Maharashtra district "
-            "polygons with matching names."
+            "Check that the ranking CSV contains district names "
+            "and the GeoJSON contains Maharashtra district polygons."
         )
-
 # ============================================================
 # 22. FOOTER
 # ============================================================
