@@ -769,7 +769,7 @@ def draw_cci_district_map(map_data, district_col):
     ax.set_title(
         "Maharashtra Climate Change Index (CCI)\n"
         "PCA-Based District Ranking: Q1, Q2 and Q3",
-        fontsize=15,
+        fontsize=16,
         fontweight="bold",
         pad=18,
     )
@@ -791,65 +791,6 @@ st.subheader(
     "PCA-Based Analysis of 36 Districts"
 )
 st.divider()
-
-
-# ============================================================
-# 10. LOAD RANKING DATA
-# ============================================================
-
-st.sidebar.header("📂 Project Data")
-
-uploaded_ranking = st.sidebar.file_uploader(
-    "Upload CCI ranking CSV or Excel",
-    type=["csv", "xlsx"],
-    key="ranking_upload",
-)
-
-ranking = None
-
-try:
-
-    if uploaded_ranking is not None:
-
-        uploaded_bytes = uploaded_ranking.getvalue()
-
-        if uploaded_ranking.name.lower().endswith(".csv"):
-            raw_ranking = read_ranking_csv(
-                uploaded_bytes
-            )
-        else:
-            raw_ranking = read_ranking_excel(
-                uploaded_bytes
-            )
-
-        ranking = prepare_ranking(
-            raw_ranking
-        )
-
-    elif RANKING_FILE.exists():
-
-        raw_ranking = pd.read_csv(
-            RANKING_FILE
-        )
-
-        ranking = prepare_ranking(
-            raw_ranking
-        )
-
-    else:
-
-        st.warning(
-            "CCI_Ranking.csv was not found. Upload your ranking "
-            "file using the sidebar or add CCI_Ranking.csv "
-            "to your project folder."
-        )
-
-except Exception as exc:
-
-    st.error(
-        f"Unable to load the ranking data: {exc}"
-    )
-
 
 # ============================================================
 # 11. RANKING TABLE, SUMMARY AND BAR CHARTS
