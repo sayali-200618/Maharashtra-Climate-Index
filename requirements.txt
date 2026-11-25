@@ -1,8 +1,10 @@
 streamlit
 pandas
-openpyxl
-plotly
-shapely
-geojson
+numpy
 geopandas
-kaleido
+shapely
+pyproj
+pyogrio
+matplotlib
+plotly
+openpyxl
