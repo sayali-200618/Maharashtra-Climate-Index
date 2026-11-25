@@ -795,7 +795,18 @@ st.divider()
 # ============================================================
 # 11. RANKING TABLE, SUMMARY AND BAR CHARTS
 # ============================================================
+# Load ranking data automatically from GitHub
+ranking = None
 
+try:
+    if RANKING_FILE.exists():
+        raw_ranking = pd.read_csv(RANKING_FILE)
+        ranking = prepare_ranking(raw_ranking)
+    else:
+        st.error("CCI_Ranking.csv file not found in repository.")
+
+except Exception as exc:
+    st.error(f"Unable to load ranking data: {exc}")
 if ranking is not None:
 
     st.success(
